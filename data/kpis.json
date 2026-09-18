@@ -1,0 +1,35 @@
+{
+  "roles": {
+    "EA": {
+      "name": "Enterprise Architect",
+      "kpis": [
+        { "id": "ea_joule", "label": "Joule Activation Rate", "target": "50%", "category": "Tool Adoption" },
+        { "id": "ea_ai_plan", "label": "AI Adoption Plan Completion", "target": "60%", "category": "Tool Adoption" },
+        { "id": "ea_gainsight", "label": "Gainsight Touchpoint Coverage", "target": "75%", "category": "Coverage" },
+        { "id": "ea_coverage", "label": "EA Customer Coverage Ratio", "target": "70%", "category": "Coverage" },
+        { "id": "ea_enablement", "label": "Q3 Enablement Completion", "target": "80%", "category": "Learning" },
+        { "id": "ea_pipeline", "label": "EA-Influenced Pipeline Growth", "target": "15%", "category": "Business Impact" }
+      ]
+    },
+    "DA": {
+      "name": "Digital Advisor",
+      "kpis": [
+        { "id": "da_joule", "label": "Joule Activation Rate", "target": "45%", "category": "Tool Adoption" },
+        { "id": "da_ai_plan", "label": "AI Adoption Plan Completion", "target": "55%", "category": "Tool Adoption" },
+        { "id": "da_coverage", "label": "DA Customer Coverage Ratio", "target": "65%", "category": "Coverage" },
+        { "id": "da_enablement", "label": "Q3 Enablement Completion", "target": "75%", "category": "Learning" },
+        { "id": "da_pipeline", "label": "DA-Influenced Pipeline Growth", "target": "12%", "category": "Business Impact" }
+      ]
+    },
+    "CEP": {
+      "name": "Customer Engagement Partner",
+      "kpis": [
+        { "id": "cep_joule", "label": "Joule Activation Rate", "target": "55%", "category": "Tool Adoption" },
+        { "id": "cep_nps", "label": "Customer NPS Score", "target": "45", "category": "Business Impact" },
+        { "id": "cep_coverage", "label": "CEP Coverage Ratio", "target": "80%", "category": "Coverage" },
+        { "id": "cep_enablement", "label": "Q3 Enablement Completion", "target": "85%", "category": "Learning" }
+      ]
+    }
+  },
+  "regions": ["MEE", "EMEA", "AMER", "APAC"]
+}

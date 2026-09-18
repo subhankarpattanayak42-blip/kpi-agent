@@ -1,0 +1,17 @@
+{
+  "regional_leaders": [
+    { "id": "dan_mee",   "name": "Dan Fagan",          "role": "EA",  "region": "MEE",  "email": "dan.fagan@sap.com" },
+    { "id": "sara_amer", "name": "Sara Mitchell",       "role": "EA",  "region": "AMER", "email": "sara.mitchell@sap.com" },
+    { "id": "liu_apac",  "name": "Liu Wei",             "role": "EA",  "region": "APAC", "email": "liu.wei@sap.com" },
+    { "id": "anna_emea", "name": "Anna Bergmann",       "role": "EA",  "region": "EMEA", "email": "anna.bergmann@sap.com" },
+    { "id": "raj_mee",   "name": "Raj Sharma",          "role": "DA",  "region": "MEE",  "email": "raj.sharma@sap.com" },
+    { "id": "tom_amer",  "name": "Tom Bradley",         "role": "DA",  "region": "AMER", "email": "tom.bradley@sap.com" },
+    { "id": "mei_apac",  "name": "Mei Tanaka",          "role": "CEP", "region": "APAC", "email": "mei.tanaka@sap.com" },
+    { "id": "alex_emea", "name": "Alexander Sieferer",  "role": "CEP", "region": "EMEA", "email": "alexander.sieferer@sap.com" }
+  ],
+  "global_sponsors": [
+    { "id": "gs_ea",  "name": "Thomas Pfister", "role": "EA",  "email": "thomas.pfister@sap.com" },
+    { "id": "gs_da",  "name": "Jan Manos",       "role": "DA",  "email": "jan.manos@sap.com" },
+    { "id": "gs_cep", "name": "Bina Goleminova", "role": "CEP", "email": "bina.goleminova@sap.com" }
+  ]
+}

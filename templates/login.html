@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Status Agent — Login</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #00335B; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: white; border-radius: 12px; padding: 40px; width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .logo-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .logo-dot { width: 36px; height: 36px; background: #F0AB00; border-radius: 50%; }
+  .logo-text { font-size: 18px; font-weight: 700; color: #00335B; }
+  .logo-sub { font-size: 12px; color: #888; }
+  h2 { font-size: 22px; color: #00335B; margin-bottom: 6px; }
+  p.sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: #444; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  select { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; color: #333; background: white; margin-bottom: 20px; }
+  select:focus { outline: none; border-color: #007DB8; }
+  .section-label { font-size: 11px; font-weight: 700; color: #007DB8; text-transform: uppercase; letter-spacing: 1px; margin: 16px 0 8px; }
+  button { width: 100%; padding: 14px; background: #00335B; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  button:hover { background: #007DB8; }
+  .divider { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+  .badge.leader { background: #e3f2fd; color: #0066b2; }
+  .badge.sponsor { background: #fff3e0; color: #e65100; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-bar">
+    <div class="logo-dot"></div>
+    <div>
+      <div class="logo-text">GTM26 KPI Status Agent</div>
+      <div class="logo-sub">SAP IM Regional Strategy &amp; Programs</div>
+    </div>
+  </div>
+  <h2>Sign In</h2>
+  <p class="sub">Select your name to begin your monthly status update or review submissions.</p>
+  <form method="POST" action="/login">
+    <label>Regional Role Leaders</label>
+    <div class="section-label">Login as a Regional Leader</div>
+    <select name="user_id" id="user_select">
+      <option value="">— Select your name —</option>
+      {% for leader in stakeholders.regional_leaders %}
+      <option value="{{ leader.id }}">{{ leader.name }} — {{ leader.role }} / {{ leader.region }}</option>
+      {% endfor %}
+      <option disabled>──────────────────────</option>
+      {% for sponsor in stakeholders.global_sponsors %}
+      <option value="{{ sponsor.id }}">{{ sponsor.name }} — Global Sponsor ({{ sponsor.role }})</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Continue →</button>
+  </form>
+  <hr class="divider">
+  <p style="font-size:11px; color:#aaa; text-align:center;">
+    GTM26 Role Transformation · Prototype v1.0 · SAP Internal
+  </p>
+</div>
+</body>
+</html>

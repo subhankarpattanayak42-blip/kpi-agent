@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sponsor Dashboard — {{ role_name }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
+  .topbar { background: #00335B; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; }
+  .topbar .dot { width: 28px; height: 28px; background: #F0AB00; border-radius: 50%; }
+  .topbar .title { font-size: 15px; font-weight: 700; }
+  .topbar .sub { font-size: 11px; color: #aac8e0; }
+  .topbar .user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
+  .topbar a { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 16px; }
+  .subbar { background: #007DB8; color: white; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .subbar .role-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 12px; font-weight: 700; }
+  .main { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
+  h2 { font-size: 22px; color: #00335B; margin-bottom: 6px; }
+  .section-sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+
+  /* Status cards row */
+  .status-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  .stat-card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-top: 4px solid #ddd; }
+  .stat-card.submitted { border-top-color: #28a745; }
+  .stat-card.sample { border-top-color: #F0AB00; }
+  .stat-card.pending { border-top-color: #dc3545; }
+  .stat-region { font-size: 18px; font-weight: 700; color: #00335B; }
+  .stat-leader { font-size: 12px; color: #888; margin: 4px 0 10px; }
+  .stat-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .stat-badge.submitted { background: #d4edda; color: #155724; }
+  .stat-badge.sample { background: #fff3cd; color: #856404; }
+  .stat-badge.pending { background: #f8d7da; color: #721c24; }
+
+  /* KPI grid */
+  .kpi-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 24px; }
+  .kpi-section h3 { font-size: 16px; color: #00335B; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #f0f4f8; }
+  .region-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #e0e0e0; background: white; color: #555; transition: all 0.2s; }
+  .tab.active { background: #00335B; color: white; border-color: #00335B; }
+  .tab:hover:not(.active) { border-color: #007DB8; color: #007DB8; }
+
+  .kpi-table { width: 100%; border-collapse: collapse; }
+  .kpi-table th { background: #f8f9fa; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e0e0e0; }
+  .kpi-table td { padding: 12px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: top; }
+  .kpi-table tr:last-child td { border-bottom: none; }
+  .kpi-name-cell { font-weight: 600; color: #00335B; }
+  .kpi-cat { font-size: 10px; color: #888; background: #f0f4f8; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 3px; }
+  .kpi-target { font-size: 12px; color: #666; }
+  .kpi-value { font-size: 16px; font-weight: 700; }
+  .kpi-value.on-track { color: #28a745; }
+  .kpi-value.at-risk { color: #fd7e14; }
+  .kpi-value.behind { color: #dc3545; }
+  .kpi-narrative { color: #555; line-height: 1.5; }
+  .no-data { color: #aaa; font-style: italic; }
+  .source-tag { font-size: 10px; color: #aaa; background: #f5f5f5; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+
+  /* Approve section */
+  .approve-box { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; }
+  .approve-info h3 { font-size: 16px; color: #00335B; margin-bottom: 6px; }
+  .approve-info p { font-size: 13px; color: #666; }
+  .approve-btn { background: #28a745; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+  .approve-btn:hover { background: #1e7e34; }
+  .approve-btn:disabled { background: #aaa; cursor: default; }
+  .completion-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin: 10px 0; overflow: hidden; }
+  .completion-fill { height: 100%; background: #28a745; border-radius: 4px; }
+  .success-banner { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px 20px; color: #155724; font-size: 14px; display: none; margin-top: 14px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="dot"></div>
+    <div>
+      <div class="title">GTM26 KPI Status Agent — Sponsor View</div>
+      <div class="sub">SAP IM Regional Strategy &amp; Programs</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;">
+    <div class="user-pill">{{ user.name }}</div>
+    <a href="/logout">Sign out</a>
+  </div>
+</div>
+<div class="subbar">
+  <span>Global Role Sponsor Dashboard</span>
+  <span class="role-badge">{{ role_name }} ({{ managed_role }})</span>
+</div>
+
+<div class="main">
+  <h2>September 2026 — {{ role_name }} Status Review</h2>
+  <p class="section-sub">Review all 4 regional submissions below. Once satisfied, approve to trigger PPT generation and delivery to senior leadership.</p>
+
+  <!-- Status cards -->
+  <div class="status-row">
+    {% for region in regions %}
+    {% set sub = all_subs[region] %}
+    <div class="stat-card {{ sub.source }}">
+      <div class="stat-region">{{ region }}</div>
+      <div class="stat-leader">
+        {% if sub.data %}{{ sub.data.leader }}{% else %}Awaiting submission{% endif %}
+      </div>
+      {% if sub.source == 'live' %}
+        <span class="stat-badge submitted">&#10003; Submitted</span>
+      {% elif sub.source == 'sample' %}
+        <span class="stat-badge sample">Sample Data</span>
+      {% else %}
+        <span class="stat-badge pending">&#10005; Pending</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- KPI detail by region -->
+  <div class="kpi-section">
+    <h3>KPI Detail by Region</h3>
+    <div class="region-tabs">
+      {% for region in regions %}
+      <button class="tab {% if loop.first %}active{% endif %}" onclick="showRegion('{{ region }}', this)">{{ region }}</button>
+      {% endfor %}
+    </div>
+    {% for region in regions %}
+    <div id="region-{{ region }}" class="region-panel" {% if not loop.first %}style="display:none"{% endif %}>
+      {% set sub = all_subs[region] %}
+      {% if sub.data %}
+      <table class="kpi-table">
+        <thead>
+          <tr>
+            <th style="width:28%">KPI</th>
+            <th style="width:12%">Target</th>
+            <th style="width:12%">Current</th>
+            <th>Narrative</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for kpi in kpis %}
+          {% set kpi_data = sub.data.kpis.get(kpi.id) if sub.data.kpis else none %}
+          <tr>
+            <td>
+              <div class="kpi-name-cell">{{ kpi.label }}</div>
+              <div class="kpi-cat">{{ kpi.category }}</div>
+            </td>
+            <td class="kpi-target">{{ kpi.target }}</td>
+            <td>
+              {% if kpi_data %}
+              <span class="kpi-value">{{ kpi_data.value }}</span>
+              {% if sub.source == 'sample' %}<span class="source-tag">Aug</span>{% endif %}
+              {% else %}
+              <span class="no-data">—</span>
+              {% endif %}
+            </td>
+            <td class="kpi-narrative">
+              {% if kpi_data %}{{ kpi_data.narrative }}{% else %}<span class="no-data">Not submitted yet</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:#aaa; padding:20px; text-align:center; font-style:italic;">No submission received from {{ region }} yet.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Approve box -->
+  <div class="approve-box">
+    <div class="approve-info">
+      <h3>Approve &amp; Generate Report</h3>
+      <p>Approving will auto-generate the regional and global PPT reports and send them to Jan Manos &amp; Thomas Pfister.</p>
+      {% set submitted_count = all_subs.values() | selectattr('source', 'in', ['live', 'sample']) | list | length %}
+      <div style="margin-top:10px; font-size:13px; color:#555;">
+        Regions with data: <strong>{{ submitted_count }} / {{ regions | length }}</strong>
+      </div>
+      <div class="completion-bar">
+        <div class="completion-fill" style="width:{{ (submitted_count / regions|length * 100)|int }}%"></div>
+      </div>
+    </div>
+    <button class="approve-btn" id="approve-btn" onclick="approveAll()">
+      Approve &amp; Generate PPT ✓
+    </button>
+  </div>
+  <div class="success-banner" id="success-banner"></div>
+</div>
+
+<script>
+function showRegion(region, btn) {
+  document.querySelectorAll('.region-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('region-' + region).style.display = 'block';
+  btn.classList.add('active');
+}
+
+async function approveAll() {
+  const btn = document.getElementById('approve-btn');
+  btn.disabled = true;
+  btn.textContent = 'Approving…';
+  const res = await fetch('/api/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: '{{ managed_role }}' })
+  });
+  const data = await res.json();
+  if (data.success) {
+    btn.textContent = '✓ Approved';
+    const banner = document.getElementById('success-banner');
+    banner.style.display = 'block';
+    banner.innerHTML = (
+      '<strong>&#10003; All submissions approved!</strong><br>' +
+      'The {{ role_name }} status report for September 2026 has been approved. ' +
+      'PowerPoint reports (regional + global consolidated) have been generated and ' +
+      'will be delivered to Jan Manos &amp; Thomas Pfister. ' +
+      '<br><br><em>In the full BTP version, the PPT would be auto-attached and emailed automatically.</em>'
+    );
+  }
+}
+</script>
+</body>
+</html>

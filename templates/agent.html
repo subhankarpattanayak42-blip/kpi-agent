@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Status Agent — {{ user.name }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Top bar */
+  .topbar { background: #00335B; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .topbar .brand { display: flex; align-items: center; gap: 10px; }
+  .topbar .dot { width: 28px; height: 28px; background: #F0AB00; border-radius: 50%; }
+  .topbar .title { font-size: 15px; font-weight: 700; }
+  .topbar .sub { font-size: 11px; color: #aac8e0; }
+  .topbar .user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
+  .topbar a { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 16px; }
+
+  /* Progress bar */
+  .progress-bar-wrap { background: #00335B; padding: 0 24px 14px; }
+  .progress-label { font-size: 11px; color: #aac8e0; margin-bottom: 5px; }
+  .progress-track { background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; }
+  .progress-fill { background: #F0AB00; height: 6px; border-radius: 4px; transition: width 0.4s ease; }
+  .progress-steps { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .step-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; transition: background 0.3s; }
+  .step-dot.done { background: #F0AB00; }
+  .step-dot.active { background: #007DB8; }
+
+  /* Main layout */
+  .main { display: flex; flex: 1; max-width: 1100px; margin: 24px auto; gap: 20px; width: 100%; padding: 0 20px; }
+
+  /* Chat panel */
+  .chat-panel { flex: 1; display: flex; flex-direction: column; }
+  .chat-window { background: white; border-radius: 12px; flex: 1; padding: 20px; overflow-y: auto; min-height: 420px; max-height: 500px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .msg { max-width: 85%; padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6; }
+  .msg.agent { background: #e8f4fb; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 3px; }
+  .msg.user { background: #00335B; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
+  .msg-label { font-size: 10px; font-weight: 700; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .msg.agent .msg-label { color: #007DB8; }
+  .msg.user .msg-label { color: rgba(255,255,255,0.6); text-align: right; }
+
+  .kpi-header { margin-bottom: 6px; }
+  .kpi-num { font-size: 11px; font-weight: 700; color: #007DB8; text-transform: uppercase; }
+  .kpi-name { font-size: 15px; font-weight: 700; color: #00335B; display: block; margin: 3px 0; }
+  .kpi-target { font-size: 11px; color: #666; background: #f0f4f8; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-right: 6px; }
+  .kpi-cat { font-size: 11px; color: #888; background: #fff3e0; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+  .prior-box { background: #fffbe6; border-left: 3px solid #F0AB00; padding: 8px 12px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #555; }
+  .prior-label { font-size: 10px; font-weight: 700; color: #F0AB00; text-transform: uppercase; display: block; margin-bottom: 4px; }
+
+  /* Input area */
+  .input-area { background: white; border-radius: 12px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .input-row { display: flex; gap: 10px; align-items: flex-end; }
+  textarea { flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 12px; font-size: 14px; font-family: inherit; resize: none; min-height: 80px; transition: border-color 0.2s; }
+  textarea:focus { outline: none; border-color: #007DB8; }
+  .send-btn { background: #007DB8; color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background 0.2s; min-height: 80px; }
+  .send-btn:hover { background: #00335B; }
+  .send-btn:disabled { background: #ccc; cursor: default; }
+  .action-btns { display: flex; gap: 10px; margin-top: 10px; }
+  .btn { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-start { background: #00335B; color: white; }
+  .btn-start:hover { background: #007DB8; }
+  .btn-submit { background: #28a745; color: white; display: none; }
+  .btn-submit:hover { background: #1e7e34; }
+  .btn-skip { background: #f0f4f8; color: #666; }
+  .btn-skip:hover { background: #e0e8f0; }
+
+  /* Side panel */
+  .side-panel { width: 280px; display: flex; flex-direction: column; gap: 14px; }
+  .side-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .side-title { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #888; }
+  .info-val { font-weight: 600; color: #00335B; }
+  .kpi-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; color: #555; border-bottom: 1px solid #f5f5f5; }
+  .kpi-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; flex-shrink: 0; }
+  .kpi-dot.done { background: #28a745; }
+  .kpi-dot.active { background: #007DB8; }
+  .typing { display: flex; gap: 4px; align-items: center; padding: 8px 0; }
+  .typing span { width: 7px; height: 7px; border-radius: 50%; background: #007DB8; animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+  .success-msg { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px; color: #155724; font-size: 14px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="dot"></div>
+    <div>
+      <div class="title">GTM26 KPI Status Agent</div>
+      <div class="sub">SAP IM Regional Strategy &amp; Programs</div>
+    </div>
+  </div>
+  <div style="display:flex; align-items:center;">
+    <div class="user-pill">{{ user.name }} · {{ user.role }} / {{ user.region }}</div>
+    <a href="/logout">Sign out</a>
+  </div>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-label" id="progress-label">Starting your session…</div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="progress-steps" id="step-dots">
+    {% for kpi in range(total_kpis) %}
+    <div class="step-dot" id="dot-{{ kpi }}" title="KPI {{ kpi+1 }}">{{ kpi+1 }}</div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="main">
+  <div class="chat-panel">
+    <div class="chat-window" id="chat-window"></div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="user-input" placeholder="Type your update here…" rows="3"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Send →</button>
+      </div>
+      <div class="action-btns">
+        <button class="btn btn-start" id="start-btn" onclick="startSession()">Begin Update →</button>
+        <button class="btn btn-skip" id="skip-btn" onclick="skipKpi()" style="display:none">Skip this KPI</button>
+        <button class="btn btn-submit" id="submit-btn" onclick="submitAll()">Submit to Sponsor ✓</button>
+      </div>
+    </div>
+    <div class="success-msg" id="success-msg"></div>
+  </div>
+
+  <div class="side-panel">
+    <div class="side-card">
+      <div class="side-title">Your Details</div>
+      <div class="info-row"><span class="info-label">Name</span><span class="info-val">{{ user.name }}</span></div>
+      <div class="info-row"><span class="info-label">Role</span><span class="info-val">{{ role_name }}</span></div>
+      <div class="info-row"><span class="info-label">Region</span><span class="info-val">{{ user.region }}</span></div>
+      <div class="info-row"><span class="info-label">Reporting month</span><span class="info-val">Sep 2026</span></div>
+      <div class="info-row"><span class="info-label">Prior month</span><span class="info-val">{{ prior_month }}</span></div>
+    </div>
+    <div class="side-card">
+      <div class="side-title">KPI Checklist ({{ total_kpis }} total)</div>
+      <div id="kpi-checklist"></div>
+    </div>
+    <div class="side-card" style="background:#fffbe6; border:1px solid #F0AB00;">
+      <div class="side-title" style="color:#c87d00;">How this works</div>
+      <p style="font-size:12px; color:#666; line-height:1.6;">
+        I'll walk you through each KPI and show what you said last month. Update or confirm each one, then submit. Your Global Role Sponsor will review before the report is generated.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+const totalKpis = {{ total_kpis }};
+let currentKpiIndex = -1;
+let kpiLabels = [];
+let sessionStarted = false;
+
+function scrollToBottom() {
+  const cw = document.getElementById('chat-window');
+  cw.scrollTop = cw.scrollHeight;
+}
+
+function addMessage(html, isUser) {
+  const cw = document.getElementById('chat-window');
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.flexDirection = 'column';
+  wrapper.style.alignItems = isUser ? 'flex-end' : 'flex-start';
+  const label = document.createElement('div');
+  label.className = 'msg-label';
+  label.textContent = isUser ? 'You' : 'Agent';
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + (isUser ? 'user' : 'agent');
+  msg.innerHTML = html;
+  wrapper.appendChild(label);
+  wrapper.appendChild(msg);
+  cw.appendChild(wrapper);
+  scrollToBottom();
+}
+
+function showTyping() {
+  const cw = document.getElementById('chat-window');
+  const t = document.createElement('div');
+  t.id = 'typing-indicator';
+  t.className = 'typing';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  cw.appendChild(t);
+  scrollToBottom();
+}
+
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+function updateProgress(idx, total) {
+  const pct = total > 0 ? Math.round((idx / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent =
+    idx === 0 ? 'Ready to begin…' :
+    idx >= total ? 'All KPIs captured — ready to submit!' :
+    `KPI ${idx} of ${total} completed`;
+  for (let i = 0; i < total; i++) {
+    const dot = document.getElementById('dot-' + i);
+    if (!dot) continue;
+    dot.className = 'step-dot ' + (i < idx ? 'done' : i === idx ? 'active' : '');
+  }
+}
+
+function updateChecklist(doneIdx) {
+  const cl = document.getElementById('kpi-checklist');
+  if (!kpiLabels.length) return;
+  cl.innerHTML = '';
+  kpiLabels.forEach((label, i) => {
+    const row = document.createElement('div');
+    row.className = 'kpi-list-item';
+    const dot = document.createElement('div');
+    dot.className = 'kpi-dot ' + (i < doneIdx ? 'done' : i === doneIdx ? 'active' : '');
+    const lbl = document.createElement('span');
+    lbl.textContent = label;
+    lbl.style.color = i < doneIdx ? '#28a745' : i === doneIdx ? '#007DB8' : '#888';
+    row.appendChild(dot); row.appendChild(lbl);
+    cl.appendChild(row);
+  });
+}
+
+async function apiCall(message) {
+  showTyping();
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: message })
+  });
+  hideTyping();
+  return await res.json();
+}
+
+async function startSession() {
+  document.getElementById('start-btn').style.display = 'none';
+  sessionStarted = true;
+  const data = await apiCall('');
+  handleResponse(data);
+}
+
+async function startKpis() {
+  addMessage('Yes, let\'s begin!', true);
+  const data = await apiCall('start');
+  handleResponse(data);
+}
+
+async function sendMessage() {
+  const inp = document.getElementById('user-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  addMessage(msg, true);
+  inp.value = '';
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('skip-btn').style.display = 'none';
+  currentKpiIndex++;
+  updateProgress(currentKpiIndex, totalKpis);
+  updateChecklist(currentKpiIndex);
+  const data = await apiCall(msg);
+  handleResponse(data);
+}
+
+async function skipKpi() {
+  addMessage('[Skipped — no update this month]', true);
+  document.getElementById('skip-btn').style.display = 'none';
+  currentKpiIndex++;
+  const data = await apiCall('[SKIP]');
+  handleResponse(data);
+}
+
+function handleResponse(data) {
+  if (data.type === 'greeting') {
+    addMessage(data.text, false);
+    if (data.show_start) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-start';
+      btn.textContent = 'Begin →';
+      btn.style.marginTop = '10px';
+      btn.onclick = startKpis;
+      document.getElementById('chat-window').lastChild.lastChild.appendChild(btn);
+    }
+    updateProgress(0, totalKpis);
+  }
+  else if (data.type === 'kpi') {
+    // Extract KPI label for checklist
+    const m = data.text.match(/kpi-name">(.*?)<\/span>/i);
+    if (m && kpiLabels.length < totalKpis) kpiLabels.push(m[1]);
+    addMessage(data.text, false);
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('skip-btn').style.display = 'inline-block';
+    document.getElementById('user-input').focus();
+    updateProgress(data.kpi_index, data.total);
+    updateChecklist(data.kpi_index);
+  }
+  else if (data.type === 'summary') {
+    addMessage(data.text, false);
+    document.getElementById('send-btn').disabled = true;
+    document.getElementById('skip-btn').style.display = 'none';
+    document.getElementById('submit-btn').style.display = 'inline-block';
+    updateProgress(totalKpis, totalKpis);
+    updateChecklist(totalKpis);
+  }
+  else if (data.type === 'message') {
+    addMessage(data.text, false);
+  }
+  scrollToBottom();
+}
+
+async function submitAll() {
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('submit-btn').textContent = 'Submitting…';
+  const res = await fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const data = await res.json();
+  if (data.success) {
+    document.getElementById('input-area') && (document.querySelector('.input-area').style.display = 'none');
+    const sm = document.getElementById('success-msg');
+    sm.style.display = 'block';
+    sm.innerHTML = '&#10003; ' + data.text + '<br><br><a href="/logout" style="color:#155724; font-weight:700;">Sign out</a>';
+    addMessage(data.text, false);
+    updateProgress(totalKpis, totalKpis);
+  }
+}
+
+document.getElementById('user-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey && !document.getElementById('send-btn').disabled) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+// Auto-start greeting
+window.onload = () => startSession();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "EA_MEE_2026_08": {
+    "submitted": true,
+    "month": "August 2026",
+    "leader": "Dan Fagan",
+    "kpis": {
+      "ea_joule":      { "value": "39%", "narrative": "MEE at 39%, pushing to 45% via Oct enablement wave. 3 large accounts activated this month." },
+      "ea_ai_plan":    { "value": "48%", "narrative": "Targeting 55% by Q3 close. 12 accounts have submitted AI adoption plans this month." },
+      "ea_gainsight":  { "value": "68%", "narrative": "Improved from 62%. Gainsight adoption campaign running across MEE EAs." },
+      "ea_coverage":   { "value": "69%", "narrative": "Strong pipeline. 5 new EA-covered accounts added in August." },
+      "ea_enablement": { "value": "72%", "narrative": "Slightly behind target. Two cohorts scheduled for Sep completion." },
+      "ea_pipeline":   { "value": "11%", "narrative": "Growing steadily. Q4 expected to close above target with 3 key deals in pipeline." }
+    }
+  },
+  "EA_AMER_2026_08": {
+    "submitted": true,
+    "month": "August 2026",
+    "leader": "Sara Mitchell",
+    "kpis": {
+      "ea_joule":      { "value": "44%", "narrative": "AMER leading MEE. Strong adoption in East Coast accounts." },
+      "ea_ai_plan":    { "value": "51%", "narrative": "On track. Large enterprise accounts driving the numbers." },
+      "ea_gainsight":  { "value": "71%", "narrative": "Above MEE. Team well-trained on Gainsight workflow." },
+      "ea_coverage":   { "value": "73%", "narrative": "Best region this quarter. Active pipeline across all segments." },
+      "ea_enablement": { "value": "80%", "narrative": "Target met. All AMER EAs completed Q3 mandatory learning." },
+      "ea_pipeline":   { "value": "16%", "narrative": "Above target. Q3 closes looking very strong." }
+    }
+  },
+  "DA_MEE_2026_08": {
+    "submitted": true,
+    "month": "August 2026",
+    "leader": "Raj Sharma",
+    "kpis": {
+      "da_joule":      { "value": "35%", "narrative": "Below target. Enablement drive planned for Oct." },
+      "da_ai_plan":    { "value": "42%", "narrative": "Several accounts in progress. Expecting jump next month." },
+      "da_coverage":   { "value": "60%", "narrative": "Working to close gap. 8 new accounts being onboarded." },
+      "da_enablement": { "value": "68%", "narrative": "2 cohorts remaining in Sep. On track to hit target." },
+      "da_pipeline":   { "value": "10%", "narrative": "Slightly below. 2 large deals expected to close in Oct." }
+    }
+  }
+}
