@@ -62,6 +62,13 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100
 .tbl-btn { border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .tbl-btn.del { background: #fdecea; color: #c62828; }
 .tbl-btn.del:hover { background: #c62828; color: white; }
+.tbl-btn.edit { background: #e3f2fd; color: #0066b2; }
+.tbl-btn.edit:hover { background: #0066b2; color: white; }
+.tbl-btn.save { background: #e8f5e9; color: #2e7d32; }
+.tbl-btn.save:hover { background: #2e7d32; color: white; }
+.tbl-btn.cancel-edit { background: #f5f5f5; color: #666; margin-left: 4px; }
+.editable-input { width: 100%; padding: 5px 8px; border: 1px solid #007DB8; border-radius: 4px; font-size: 13px; font-family: inherit; }
+.editable-input.target { width: 90px; }
 
 /* ── Forms ── */
 .form-section { display: none; background: #f8f9fa; border-radius: 8px; padding: 18px; margin-bottom: 16px; border: 1px solid #e0e0e0; }
@@ -209,6 +216,7 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100
         <thead><tr><th>Role</th><th>KPI Label</th><th>Target</th><th>Category</th><th>Actions</th></tr></thead>
         <tbody id="kpis-tbody"><tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">Loading…</td></tr></tbody>
       </table>
+      <p style="font-size:11px;color:#aaa;margin-top:10px;">Click <strong>Edit</strong> on any row to change the label, target, or category inline.</p>
     </div>
   </div>
 
@@ -375,13 +383,58 @@ function renderKpis(kpis) {
   const tbody = document.getElementById('kpis-tbody');
   if (!kpis.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:#aaa;text-align:center;padding:16px;">No KPIs defined.</td></tr>'; return; }
   tbody.innerHTML = kpis.map(k => `
-    <tr>
+    <tr id="kpi-row-${k.id}-${k.role}" data-id="${k.id}" data-role="${k.role}">
       <td><span class="badge-role">${k.role}</span></td>
-      <td style="font-weight:600;color:#00335B;">${k.label}</td>
-      <td><strong style="color:#007DB8;">${k.target}</strong></td>
-      <td><span class="badge-cat">${k.category}</span></td>
-      <td><button class="tbl-btn del" onclick="deleteKpi('${k.id}','${k.role}','${k.label}')">Remove</button></td>
+      <td class="kpi-label-cell" style="font-weight:600;color:#00335B;">${esc(k.label)}</td>
+      <td class="kpi-target-cell"><strong style="color:#007DB8;">${esc(k.target)}</strong></td>
+      <td class="kpi-cat-cell"><span class="badge-cat">${esc(k.category)}</span></td>
+      <td class="kpi-action-cell">
+        <button class="tbl-btn edit" onclick="editKpi('${k.id}','${k.role}')">Edit</button>
+        <button class="tbl-btn del" onclick="deleteKpi('${k.id}','${k.role}','${esc(k.label)}')">Remove</button>
+      </td>
     </tr>`).join('');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+const CATEGORIES = ['Adoption','Coverage','Enablement','Commercial','Satisfaction','Planning','Engagement'];
+
+function editKpi(id, role) {
+  const row = document.getElementById('kpi-row-' + id + '-' + role);
+  const labelCell  = row.querySelector('.kpi-label-cell');
+  const targetCell = row.querySelector('.kpi-target-cell');
+  const catCell    = row.querySelector('.kpi-cat-cell');
+  const actionCell = row.querySelector('.kpi-action-cell');
+
+  const curLabel  = labelCell.textContent.trim();
+  const curTarget = targetCell.textContent.trim();
+  const curCat    = catCell.textContent.trim();
+
+  labelCell.innerHTML  = `<input class="editable-input" id="edit-label-${id}-${role}" value="${esc(curLabel)}">`;
+  targetCell.innerHTML = `<input class="editable-input target" id="edit-target-${id}-${role}" value="${esc(curTarget)}">`;
+  catCell.innerHTML    = `<select class="editable-input" id="edit-cat-${id}-${role}">${
+    CATEGORIES.map(c => `<option${c===curCat?' selected':''}>${c}</option>`).join('')
+  }</select>`;
+  actionCell.innerHTML = `
+    <button class="tbl-btn save"        onclick="saveKpi('${id}','${role}')">Save</button>
+    <button class="tbl-btn cancel-edit" onclick="loadKpis()">Cancel</button>`;
+
+  document.getElementById('edit-label-' + id + '-' + role).focus();
+}
+
+async function saveKpi(id, role) {
+  const label    = document.getElementById('edit-label-'  + id + '-' + role).value.trim();
+  const target   = document.getElementById('edit-target-' + id + '-' + role).value.trim();
+  const category = document.getElementById('edit-cat-'    + id + '-' + role).value;
+  if (!label) { showToast('Label cannot be empty.', true); return; }
+  try {
+    await api('/admin/api/kpis/' + id + '/' + role, {
+      method: 'PATCH',
+      body: JSON.stringify({ label, target, category })
+    });
+    showToast('✓ KPI updated.');
+    loadKpis();
+  } catch(e) { showToast('Error: ' + e.message, true); }
 }
 
 async function addKpi() {

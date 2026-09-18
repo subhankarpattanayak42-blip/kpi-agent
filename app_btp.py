@@ -800,6 +800,24 @@ def admin_delete_kpi(kid, role):
         conn.commit()
     return jsonify({"success": True})
 
+@app.route("/admin/api/kpis/<kid>/<role>", methods=["PATCH"])
+def admin_update_kpi(kid, role):
+    _require_admin()
+    data     = request.json
+    label    = data.get("label", "").strip()
+    target   = data.get("target", "").strip()
+    category = data.get("category", "").strip()
+    if not label:
+        return jsonify({"error": "label required"}), 400
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE kpi_definitions SET label=%s, target=%s, category=%s
+                WHERE id=%s AND role=%s
+            """, (label, target, category, kid, role))
+        conn.commit()
+    return jsonify({"success": True})
+
 # ── Admin API: Prior Month Data ───────────────────────────────────────────────
 
 @app.route("/admin/api/prior", methods=["GET"])
