@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — KPI Status Agent</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #00335B; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: white; border-radius: 12px; padding: 40px; width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.logo-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.logo-dot { width: 34px; height: 34px; background: #F0AB00; border-radius: 50%; }
+.logo-text { font-size: 16px; font-weight: 700; color: #00335B; }
+.logo-sub { font-size: 12px; color: #888; }
+h2 { font-size: 20px; color: #00335B; margin-bottom: 6px; }
+p { color: #666; font-size: 13px; margin-bottom: 22px; }
+label { display: block; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+input { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; margin-bottom: 14px; }
+input:focus { outline: none; border-color: #007DB8; }
+.error { color: #c62828; font-size: 12px; margin-bottom: 12px; }
+button { width: 100%; padding: 13px; background: #00335B; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+button:hover { background: #007DB8; }
+.back { display: block; text-align: center; margin-top: 14px; font-size: 12px; color: #aaa; text-decoration: none; }
+.back:hover { color: #007DB8; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-bar">
+    <div class="logo-dot"></div>
+    <div>
+      <div class="logo-text">Admin Panel</div>
+      <div class="logo-sub">GTM26 KPI Status Agent</div>
+    </div>
+  </div>
+  <h2>Admin Access</h2>
+  <p>Enter the admin password to manage users, KPIs, and prior month data.</p>
+  <form method="POST" action="/admin/login">
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Enter admin password" autofocus>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <button type="submit">Enter Admin →</button>
+  </form>
+  <a class="back" href="/login">← Back to login</a>
+</div>
+</body>
+</html>

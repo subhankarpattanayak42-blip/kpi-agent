@@ -679,6 +679,191 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+# ── Admin ─────────────────────────────────────────────────────────────────────
+
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "sap2026")
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        pw = request.form.get("password", "")
+        if pw == ADMIN_PASSWORD:
+            session["is_admin"] = True
+            return redirect(url_for("admin_panel"))
+        return render_template("admin_login.html", error="Incorrect password.")
+    return render_template("admin_login.html", error=None)
+
+@app.route("/admin")
+def admin_panel():
+    if not session.get("is_admin"):
+        return redirect(url_for("admin_login"))
+    return render_template("admin.html")
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("is_admin", None)
+    return redirect(url_for("login"))
+
+def _require_admin():
+    if not session.get("is_admin"):
+        from flask import abort
+        abort(401)
+
+# ── Admin API: Users ──────────────────────────────────────────────────────────
+
+@app.route("/admin/api/users", methods=["GET"])
+def admin_get_users():
+    _require_admin()
+    users = db_get_users()
+    leaders  = [dict(u) for u in users if u["user_type"] == "leader"]
+    sponsors = [dict(u) for u in users if u["user_type"] == "sponsor"]
+    return jsonify({"leaders": leaders, "sponsors": sponsors})
+
+@app.route("/admin/api/users", methods=["POST"])
+def admin_add_user():
+    _require_admin()
+    data = request.json
+    name        = data.get("name", "").strip()
+    role        = data.get("role", "").strip()
+    region      = data.get("region", "").strip() or None
+    user_type   = data.get("user_type", "leader")
+    managed_role = data.get("managed_role", role if user_type == "sponsor" else None)
+    email       = data.get("email", "").strip()
+    if not name or not role:
+        return jsonify({"error": "name and role required"}), 400
+    uid = re.sub(r'[^a-z0-9_]', '_', name.lower().replace(' ', '_'))
+    if region:
+        uid = uid + "_" + region.lower()
+    if user_type == "sponsor":
+        uid = "gs_" + role.lower() + "_" + uid
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO kpi_users (id, name, role, region, user_type, managed_role)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    name=EXCLUDED.name, role=EXCLUDED.role, region=EXCLUDED.region,
+                    user_type=EXCLUDED.user_type, managed_role=EXCLUDED.managed_role
+            """, (uid, name, role, region, user_type, managed_role))
+        conn.commit()
+    return jsonify({"success": True, "id": uid})
+
+@app.route("/admin/api/users/<uid>", methods=["DELETE"])
+def admin_delete_user(uid):
+    _require_admin()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM kpi_users WHERE id=%s", (uid,))
+        conn.commit()
+    return jsonify({"success": True})
+
+# ── Admin API: KPIs ───────────────────────────────────────────────────────────
+
+@app.route("/admin/api/kpis", methods=["GET"])
+def admin_get_kpis():
+    _require_admin()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM kpi_definitions ORDER BY role, sort_order")
+            kpis = [dict(k) for k in cur.fetchall()]
+    return jsonify({"kpis": kpis})
+
+@app.route("/admin/api/kpis", methods=["POST"])
+def admin_add_kpi():
+    _require_admin()
+    data = request.json
+    kid      = data.get("id", "").strip().replace(" ", "_")
+    role     = data.get("role", "").strip()
+    label    = data.get("label", "").strip()
+    target   = data.get("target", "").strip()
+    category = data.get("category", "").strip()
+    if not kid or not role or not label:
+        return jsonify({"error": "id, role, label required"}), 400
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO kpi_definitions (id, role, label, target, category, sort_order)
+                SELECT %s, %s, %s, %s, %s, COALESCE(MAX(sort_order),0)+1
+                FROM kpi_definitions WHERE role=%s
+                ON CONFLICT (id, role) DO UPDATE SET
+                    label=EXCLUDED.label, target=EXCLUDED.target, category=EXCLUDED.category
+            """, (kid, role, label, target, category, role))
+        conn.commit()
+    return jsonify({"success": True})
+
+@app.route("/admin/api/kpis/<kid>/<role>", methods=["DELETE"])
+def admin_delete_kpi(kid, role):
+    _require_admin()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM kpi_definitions WHERE id=%s AND role=%s", (kid, role))
+        conn.commit()
+    return jsonify({"success": True})
+
+# ── Admin API: Prior Month Data ───────────────────────────────────────────────
+
+@app.route("/admin/api/prior", methods=["GET"])
+def admin_get_prior():
+    _require_admin()
+    role   = request.args.get("role", "EA")
+    region = request.args.get("region", "MEE")
+    month  = request.args.get("month", "2026_08")
+    kpis   = db_get_kpis(role)
+    history = db_get_history(role, region, month)
+    if isinstance(history, str):
+        try:
+            history = json.loads(history)
+        except Exception:
+            history = {}
+    return jsonify({"kpis": [dict(k) for k in kpis], "history": history or {}})
+
+@app.route("/admin/api/prior", methods=["POST"])
+def admin_save_prior():
+    _require_admin()
+    data     = request.json
+    role     = data.get("role", "EA")
+    region   = data.get("region", "MEE")
+    month    = data.get("month", "2026_08")
+    kpi_data = data.get("kpi_data", {})
+    hist_key = f"{role}_{region}_{month}"
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO kpi_history (hist_key, role, region, month, kpi_data)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (hist_key) DO UPDATE SET kpi_data=EXCLUDED.kpi_data
+            """, (hist_key, role, region, month, json.dumps(kpi_data)))
+        conn.commit()
+    return jsonify({"success": True})
+
+# ── Admin API: Submissions ────────────────────────────────────────────────────
+
+@app.route("/admin/api/submissions", methods=["GET"])
+def admin_get_submissions():
+    _require_admin()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM kpi_submissions ORDER BY submitted_at DESC")
+            subs = [dict(s) for s in cur.fetchall()]
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM kpi_definitions ORDER BY role, sort_order")
+            all_kpis = cur.fetchall()
+    kpis_by_role = {}
+    for k in all_kpis:
+        kpis_by_role.setdefault(k["role"], []).append(dict(k))
+    # Ensure kpi_data is dict not string
+    for s in subs:
+        if isinstance(s.get("kpi_data"), str):
+            try:
+                s["kpi_data"] = json.loads(s["kpi_data"])
+            except Exception:
+                s["kpi_data"] = {}
+        # Convert timestamps to string for JSON serialisation
+        for ts_field in ("submitted_at", "approved_at"):
+            if s.get(ts_field) and not isinstance(s[ts_field], str):
+                s[ts_field] = s[ts_field].isoformat()
+    return jsonify({"submissions": subs, "kpis_by_role": kpis_by_role})
+
 @app.route("/health")
 def health():
     try:
