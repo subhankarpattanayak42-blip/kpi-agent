@@ -17,6 +17,60 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-heig
 .user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
 .topbar a.signout { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 14px; cursor: pointer; }
 
+/* ══ ADMIN ══ */
+.admin-wrap { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+.admin-wrap h2 { font-size: 21px; color: #00335B; margin-bottom: 4px; }
+.admin-sub { color: #777; font-size: 13px; margin-bottom: 22px; }
+.admin-tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #e0e0e0; }
+.admin-tab { padding: 10px 20px; border: none; background: none; font-size: 13px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+.admin-tab.active { color: #00335B; border-bottom-color: #00335B; }
+.admin-tab:hover:not(.active) { color: #007DB8; }
+.admin-panel { display: none; }
+.admin-panel.active { display: block; }
+.admin-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 18px; }
+.admin-card h3 { font-size: 14px; color: #00335B; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+.admin-tbl { width: 100%; border-collapse: collapse; }
+.admin-tbl th { background: #f8f9fa; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 2px solid #e0e0e0; }
+.admin-tbl td { padding: 10px 12px; border-bottom: 1px solid #f5f5f5; font-size: 13px; vertical-align: middle; }
+.admin-tbl tr:last-child td { border-bottom: none; }
+.admin-tbl tr:hover td { background: #fafbfc; }
+.tbl-btn { padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+.tbl-btn.edit { background: #e3f2fd; color: #0066b2; }
+.tbl-btn.edit:hover { background: #bbdefb; }
+.tbl-btn.del { background: #fde8e8; color: #c62828; }
+.tbl-btn.del:hover { background: #ffcdd2; }
+.add-btn { background: #00335B; color: white; border: none; padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 14px; transition: background 0.2s; }
+.add-btn:hover { background: #007DB8; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.4px; }
+.form-group input, .form-group select { padding: 9px 11px; border: 2px solid #e0e0e0; border-radius: 7px; font-size: 13px; font-family: inherit; transition: border-color 0.2s; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: #007DB8; }
+.form-row-btns { display: flex; gap: 10px; margin-top: 14px; }
+.save-btn { background: #28a745; color: white; border: none; padding: 9px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.save-btn:hover { background: #1e7e34; }
+.cancel-btn { background: #f0f4f8; color: #555; border: none; padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cancel-btn:hover { background: #dde6ef; }
+.form-section { background: #f8fbff; border: 1px solid #d0e4f5; border-radius: 10px; padding: 18px; margin-top: 14px; display: none; }
+.form-section.open { display: block; }
+.badge-role { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #e3f2fd; color: #0066b2; }
+.badge-region { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #e8f5e9; color: #2e7d32; }
+.badge-sponsor { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: #fff3e0; color: #e65100; }
+.badge-cat { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; background: #f0f4f8; color: #555; }
+.prior-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.prior-narrative { grid-column: 1 / -1; }
+.prior-narrative textarea { width: 100%; padding: 9px 11px; border: 2px solid #e0e0e0; border-radius: 7px; font-size: 13px; font-family: inherit; resize: vertical; min-height: 70px; }
+.prior-narrative textarea:focus { outline: none; border-color: #007DB8; }
+.submission-row td { vertical-align: top; }
+.sub-narrative { color: #555; font-size: 12px; line-height: 1.5; max-width: 320px; }
+.sub-val { font-weight: 700; color: #007DB8; }
+.toast { position: fixed; bottom: 80px; right: 24px; background: #28a745; color: white; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 99999; display: none; }
+
+/* ══ ADMIN LOGIN ══ */
+#screen-admin-login { align-items: center; justify-content: center; min-height: 100vh; background: #00335B; }
+#screen-admin-login.active { display: flex; }
+
 /* ── Floating Feedback Button ── */
 .feedback-fab { position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #F0AB00; color: #00335B; border: none; border-radius: 50px; padding: 12px 20px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.15s; text-decoration: none; }
 .feedback-fab:hover { background: #e09b00; transform: translateY(-2px); }
@@ -235,8 +289,164 @@ textarea:focus { outline: none; border-color: #007DB8; }
       ✉ Share Your Feedback
     </a>
   </div>
+  <div style="margin-top:12px; text-align:center;">
+    <a onclick="goAdminLogin()" style="font-size:11px; color:#bbb; cursor:pointer; text-decoration:underline;">⚙ Admin</a>
+  </div>
   </div>
 </div>
+
+<!-- ══ SCREEN: ADMIN LOGIN ═══════════════════════════════════════════ -->
+<div id="screen-admin-login" class="screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="dot"></div>
+      <div>
+        <div class="login-logo-text">Admin Panel</div>
+        <div class="login-logo-sub">GTM26 KPI Status Agent</div>
+      </div>
+    </div>
+    <h2>Admin Access</h2>
+    <p>Enter the admin password to manage users, KPIs, and prior month data.</p>
+    <br>
+    <label class="field-label">Password</label>
+    <input type="password" id="admin-pw" style="width:100%;padding:12px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px;margin-bottom:14px;" placeholder="Enter admin password" onkeydown="if(event.key==='Enter') checkAdminPw()">
+    <div id="admin-pw-err" style="color:#c62828;font-size:12px;margin-bottom:10px;display:none;">Incorrect password. Try again.</div>
+    <button class="btn-primary" onclick="checkAdminPw()">Enter Admin →</button>
+    <div style="margin-top:14px;text-align:center;">
+      <a onclick="goLogin()" style="font-size:12px;color:#aaa;cursor:pointer;">← Back to login</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: ADMIN ══════════════════════════════════════════════════ -->
+<div id="screen-admin" class="screen">
+  <div class="admin-wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2>⚙ Admin Panel</h2>
+      <a onclick="goLogin()" style="font-size:12px;color:#aaa;cursor:pointer;">← Back to demo</a>
+    </div>
+    <p class="admin-sub">Manage users, KPIs, prior month data, and view all submissions.</p>
+    <div class="admin-tabs">
+      <button class="admin-tab active" onclick="switchAdminTab('users', this)">👥 Users</button>
+      <button class="admin-tab" onclick="switchAdminTab('kpis', this)">📊 KPIs</button>
+      <button class="admin-tab" onclick="switchAdminTab('prior', this)">📅 Prior Month Data</button>
+      <button class="admin-tab" onclick="switchAdminTab('submissions', this)">📋 Submissions</button>
+    </div>
+
+    <!-- USERS TAB -->
+    <div id="admin-panel-users" class="admin-panel active">
+      <div class="admin-card">
+        <h3>Regional Role Leaders</h3>
+        <button class="add-btn" onclick="toggleForm('form-add-leader')">+ Add Leader</button>
+        <div class="form-section" id="form-add-leader">
+          <div class="form-grid">
+            <div class="form-group"><label>Full Name</label><input type="text" id="new-leader-name" placeholder="e.g. John Smith"></div>
+            <div class="form-group"><label>Email</label><input type="text" id="new-leader-email" placeholder="john.smith@sap.com"></div>
+            <div class="form-group"><label>Role</label>
+              <select id="new-leader-role"><option value="EA">EA — Enterprise Architect</option><option value="DA">DA — Digital Advisor</option><option value="CEP">CEP — Customer Engagement Partner</option></select>
+            </div>
+            <div class="form-group"><label>Region</label>
+              <select id="new-leader-region"><option>MEE</option><option>AMER</option><option>APAC</option><option>EMEA</option></select>
+            </div>
+          </div>
+          <div class="form-row-btns">
+            <button class="save-btn" onclick="addLeader()">Save Leader</button>
+            <button class="cancel-btn" onclick="toggleForm('form-add-leader')">Cancel</button>
+          </div>
+        </div>
+        <table class="admin-tbl" id="leaders-tbl">
+          <thead><tr><th>Name</th><th>Role</th><th>Region</th><th>Email</th><th>Actions</th></tr></thead>
+          <tbody id="leaders-tbody"></tbody>
+        </table>
+      </div>
+      <div class="admin-card">
+        <h3>Global Role Sponsors</h3>
+        <button class="add-btn" onclick="toggleForm('form-add-sponsor')">+ Add Sponsor</button>
+        <div class="form-section" id="form-add-sponsor">
+          <div class="form-grid">
+            <div class="form-group"><label>Full Name</label><input type="text" id="new-sponsor-name" placeholder="e.g. Jane Doe"></div>
+            <div class="form-group"><label>Email</label><input type="text" id="new-sponsor-email" placeholder="jane.doe@sap.com"></div>
+            <div class="form-group"><label>Role</label>
+              <select id="new-sponsor-role"><option value="EA">EA — Enterprise Architect</option><option value="DA">DA — Digital Advisor</option><option value="CEP">CEP — Customer Engagement Partner</option></select>
+            </div>
+          </div>
+          <div class="form-row-btns">
+            <button class="save-btn" onclick="addSponsor()">Save Sponsor</button>
+            <button class="cancel-btn" onclick="toggleForm('form-add-sponsor')">Cancel</button>
+          </div>
+        </div>
+        <table class="admin-tbl">
+          <thead><tr><th>Name</th><th>Manages Role</th><th>Email</th><th>Actions</th></tr></thead>
+          <tbody id="sponsors-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- KPIs TAB -->
+    <div id="admin-panel-kpis" class="admin-panel">
+      <div class="admin-card">
+        <h3>KPI Definitions</h3>
+        <button class="add-btn" onclick="toggleForm('form-add-kpi')">+ Add KPI</button>
+        <div class="form-section" id="form-add-kpi">
+          <div class="form-grid cols3">
+            <div class="form-group"><label>Role</label>
+              <select id="new-kpi-role"><option value="EA">EA</option><option value="DA">DA</option><option value="CEP">CEP</option></select>
+            </div>
+            <div class="form-group"><label>KPI Label</label><input type="text" id="new-kpi-label" placeholder="e.g. Joule Activation Rate"></div>
+            <div class="form-group"><label>Target</label><input type="text" id="new-kpi-target" placeholder="e.g. 60%"></div>
+            <div class="form-group"><label>Category</label>
+              <select id="new-kpi-cat"><option>Tool Adoption</option><option>Coverage</option><option>Business Impact</option><option>Learning</option></select>
+            </div>
+            <div class="form-group"><label>KPI ID</label><input type="text" id="new-kpi-id" placeholder="e.g. ea_new_kpi (no spaces)"></div>
+          </div>
+          <div class="form-row-btns">
+            <button class="save-btn" onclick="addKpi()">Save KPI</button>
+            <button class="cancel-btn" onclick="toggleForm('form-add-kpi')">Cancel</button>
+          </div>
+        </div>
+        <table class="admin-tbl">
+          <thead><tr><th>Role</th><th>KPI Label</th><th>Target</th><th>Category</th><th>Actions</th></tr></thead>
+          <tbody id="kpis-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PRIOR MONTH DATA TAB -->
+    <div id="admin-panel-prior" class="admin-panel">
+      <div class="admin-card">
+        <h3>Enter / Edit Prior Month Data</h3>
+        <p style="font-size:13px;color:#777;margin-bottom:16px;">This data is shown to regional leaders as "what you said last month" during the conversational collection.</p>
+        <div class="form-grid" style="margin-bottom:16px;">
+          <div class="form-group"><label>Role</label>
+            <select id="prior-role-sel" onchange="loadPriorForm()">
+              <option value="EA">EA — Enterprise Architect</option>
+              <option value="DA">DA — Digital Advisor</option>
+              <option value="CEP">CEP — Customer Engagement Partner</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Region</label>
+            <select id="prior-region-sel" onchange="loadPriorForm()">
+              <option>MEE</option><option>AMER</option><option>APAC</option><option>EMEA</option>
+            </select>
+          </div>
+        </div>
+        <div id="prior-kpi-form"></div>
+        <div class="form-row-btns" id="prior-save-btns" style="display:none;">
+          <button class="save-btn" onclick="savePriorData()">Save Prior Month Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMISSIONS TAB -->
+    <div id="admin-panel-submissions" class="admin-panel">
+      <div class="admin-card">
+        <h3>All Submissions — September 2026</h3>
+        <div id="submissions-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
 
 <!-- ══ SCREEN: AGENT (Regional Leader) ═══════════════════════════════ -->
 <div id="screen-agent" class="screen">
@@ -755,6 +965,222 @@ function approveAll() {
     document.getElementById('approve-success').style.display = 'block';
     document.getElementById('approve-success').scrollIntoView({ behavior: 'smooth' });
   }, 1000);
+}
+
+// ══ ADMIN ═════════════════════════════════════════════════════════════════
+const ADMIN_PASSWORD = 'sap2026';
+
+function goAdminLogin() {
+  document.getElementById('topbar').style.display = 'none';
+  showScreen('admin-login');
+  document.getElementById('admin-pw').value = '';
+  document.getElementById('admin-pw-err').style.display = 'none';
+}
+
+function checkAdminPw() {
+  const pw = document.getElementById('admin-pw').value;
+  if (pw === ADMIN_PASSWORD) {
+    showScreen('admin');
+    document.getElementById('topbar').style.display = 'flex';
+    document.getElementById('topbar-user').textContent = 'Admin';
+    renderAdminUsers();
+    renderAdminKpis();
+    renderSubmissions();
+    loadPriorForm();
+  } else {
+    document.getElementById('admin-pw-err').style.display = 'block';
+  }
+}
+
+function switchAdminTab(tab, btn) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('admin-panel-' + tab).classList.add('active');
+  if (tab === 'prior') loadPriorForm();
+  if (tab === 'submissions') renderSubmissions();
+}
+
+function toggleForm(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 2500);
+}
+
+// ── Users ──
+function renderAdminUsers() {
+  const lb = document.getElementById('leaders-tbody');
+  lb.innerHTML = Object.values(USERS).filter(u => u.type === 'leader').map(u => `
+    <tr>
+      <td>${u.name}</td>
+      <td><span class="badge-role">${u.role}</span></td>
+      <td><span class="badge-region">${u.region}</span></td>
+      <td style="color:#888;font-size:12px;">${u.id}@sap.com</td>
+      <td><button class="tbl-btn del" onclick="deleteUser('${u.id}')">Remove</button></td>
+    </tr>`).join('');
+
+  const sb = document.getElementById('sponsors-tbody');
+  sb.innerHTML = Object.values(USERS).filter(u => u.type === 'sponsor').map(u => `
+    <tr>
+      <td>${u.name}</td>
+      <td><span class="badge-sponsor">${u.role}</span></td>
+      <td style="color:#888;font-size:12px;">${u.id}@sap.com</td>
+      <td><button class="tbl-btn del" onclick="deleteUser('${u.id}')">Remove</button></td>
+    </tr>`).join('');
+}
+
+function addLeader() {
+  const name = document.getElementById('new-leader-name').value.trim();
+  const email = document.getElementById('new-leader-email').value.trim();
+  const role = document.getElementById('new-leader-role').value;
+  const region = document.getElementById('new-leader-region').value;
+  if (!name) { alert('Please enter a name.'); return; }
+  const id = name.toLowerCase().replace(/\s+/g,'_') + '_' + region.toLowerCase();
+  USERS[id] = { id, name, role, region, type: 'leader' };
+  toggleForm('form-add-leader');
+  document.getElementById('new-leader-name').value = '';
+  document.getElementById('new-leader-email').value = '';
+  renderAdminUsers();
+  showToast('✓ Leader added: ' + name);
+}
+
+function addSponsor() {
+  const name = document.getElementById('new-sponsor-name').value.trim();
+  const email = document.getElementById('new-sponsor-email').value.trim();
+  const role = document.getElementById('new-sponsor-role').value;
+  if (!name) { alert('Please enter a name.'); return; }
+  const id = 'gs_' + role.toLowerCase() + '_' + Date.now();
+  USERS[id] = { id, name, role, type: 'sponsor' };
+  toggleForm('form-add-sponsor');
+  document.getElementById('new-sponsor-name').value = '';
+  renderAdminUsers();
+  showToast('✓ Sponsor added: ' + name);
+}
+
+function deleteUser(id) {
+  if (!confirm('Remove ' + USERS[id].name + '?')) return;
+  delete USERS[id];
+  renderAdminUsers();
+  showToast('User removed.');
+}
+
+// ── KPIs ──
+function renderAdminKpis() {
+  const tbody = document.getElementById('kpis-tbody');
+  const rows = [];
+  Object.entries(ROLES).forEach(([roleKey, roleData]) => {
+    roleData.kpis.forEach((kpi, idx) => {
+      rows.push(`<tr>
+        <td><span class="badge-role">${roleKey}</span></td>
+        <td>${kpi.label}</td>
+        <td style="color:#007DB8;font-weight:700;">${kpi.target}</td>
+        <td><span class="badge-cat">${kpi.category}</span></td>
+        <td><button class="tbl-btn del" onclick="deleteKpi('${roleKey}',${idx})">Remove</button></td>
+      </tr>`);
+    });
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+function addKpi() {
+  const role = document.getElementById('new-kpi-role').value;
+  const label = document.getElementById('new-kpi-label').value.trim();
+  const target = document.getElementById('new-kpi-target').value.trim();
+  const category = document.getElementById('new-kpi-cat').value;
+  const id = document.getElementById('new-kpi-id').value.trim().replace(/\s+/g,'_');
+  if (!label || !id) { alert('Please fill in KPI Label and ID.'); return; }
+  ROLES[role].kpis.push({ id, label, target, category });
+  toggleForm('form-add-kpi');
+  document.getElementById('new-kpi-label').value = '';
+  document.getElementById('new-kpi-id').value = '';
+  document.getElementById('new-kpi-target').value = '';
+  renderAdminKpis();
+  showToast('✓ KPI added: ' + label);
+}
+
+function deleteKpi(roleKey, idx) {
+  const kpi = ROLES[roleKey].kpis[idx];
+  if (!confirm('Remove KPI: ' + kpi.label + '?')) return;
+  ROLES[roleKey].kpis.splice(idx, 1);
+  renderAdminKpis();
+  showToast('KPI removed.');
+}
+
+// ── Prior Month Data ──
+function loadPriorForm() {
+  const role = document.getElementById('prior-role-sel').value;
+  const region = document.getElementById('prior-region-sel').value;
+  const key = role + '_' + region;
+  const hist = HISTORY[key] || { kpis: {} };
+  const kpis = ROLES[role].kpis;
+  const form = document.getElementById('prior-kpi-form');
+  form.innerHTML = kpis.map(kpi => {
+    const entry = hist.kpis[kpi.id] || {};
+    return `<div class="admin-card" style="margin-bottom:12px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <strong style="color:#00335B;font-size:13px;">${kpi.label}</strong>
+        <span class="badge-cat">${kpi.category} · Target: ${kpi.target}</span>
+      </div>
+      <div class="prior-form-grid">
+        <div class="form-group">
+          <label>Value (e.g. 39%)</label>
+          <input type="text" id="prior-val-${kpi.id}" value="${entry.value || ''}" placeholder="e.g. 39%">
+        </div>
+        <div class="form-group prior-narrative">
+          <label>Narrative</label>
+          <textarea id="prior-nar-${kpi.id}" placeholder="What was said last month…">${entry.narrative || ''}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('prior-save-btns').style.display = 'flex';
+}
+
+function savePriorData() {
+  const role = document.getElementById('prior-role-sel').value;
+  const region = document.getElementById('prior-region-sel').value;
+  const key = role + '_' + region;
+  const kpis = ROLES[role].kpis;
+  if (!HISTORY[key]) HISTORY[key] = { leader: '—', kpis: {} };
+  kpis.forEach(kpi => {
+    const val = document.getElementById('prior-val-' + kpi.id).value.trim();
+    const nar = document.getElementById('prior-nar-' + kpi.id).value.trim();
+    if (val || nar) HISTORY[key].kpis[kpi.id] = { value: val, narrative: nar };
+  });
+  showToast('✓ Prior month data saved for ' + role + ' / ' + region);
+}
+
+// ── Submissions ──
+function renderSubmissions() {
+  const el = document.getElementById('submissions-content');
+  const allSubs = { ...liveSubmissions };
+  if (Object.keys(allSubs).length === 0) {
+    el.innerHTML = '<p style="color:#aaa;padding:20px;text-align:center;font-style:italic;">No submissions yet for this session. Submit as a regional leader first.</p>';
+    return;
+  }
+  let html = '<table class="admin-tbl"><thead><tr><th>Role</th><th>Region</th><th>Leader</th><th>KPI</th><th>Value</th><th>Narrative</th><th>Status</th></tr></thead><tbody>';
+  Object.values(allSubs).forEach(sub => {
+    const kpis = ROLES[sub.role].kpis;
+    kpis.forEach((kpi, i) => {
+      const entry = sub.kpis[kpi.id];
+      html += `<tr class="submission-row">
+        ${i === 0 ? `<td rowspan="${kpis.length}"><span class="badge-role">${sub.role}</span></td>
+        <td rowspan="${kpis.length}"><span class="badge-region">${sub.region}</span></td>
+        <td rowspan="${kpis.length}" style="font-weight:600;color:#00335B;">${sub.leader}</td>` : ''}
+        <td style="font-size:12px;color:#555;">${kpi.label}</td>
+        <td><span class="sub-val">${entry ? entry.value : '—'}</span></td>
+        <td><div class="sub-narrative">${entry ? entry.narrative : '<span style="color:#ccc">Skipped</span>'}</div></td>
+        ${i === 0 ? `<td rowspan="${kpis.length}"><span class="status-badge ${sub.status === 'approved' ? 'submitted' : 'sample'}">${sub.status === 'approved' ? '✓ Approved' : '⏳ Pending'}</span></td>` : ''}
+      </tr>`;
+    });
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 </script>
 <a class="feedback-fab" href="mailto:subhankar.pattanayak@sap.com?subject=KPI%20Agent%20Demo%20Feedback&body=Hi%20Subhankar%2C%0A%0AHere%20is%20my%20feedback%20on%20the%20GTM26%20KPI%20Conversational%20Agent%20demo%3A%0A%0A1.%20Overall%20impression%3A%0A%0A2.%20What%20worked%20well%3A%0A%0A3.%20What%20needs%20improvement%3A%0A%0A4.%20Any%20missing%20features%3A%0A%0AThanks%2C">
