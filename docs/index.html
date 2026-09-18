@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTM26 KPI Status Agent — Demo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-height: 100vh; }
+
+/* ── Topbar ── */
+.topbar { background: #00335B; color: white; padding: 13px 24px; display: flex; justify-content: space-between; align-items: center; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.dot { width: 28px; height: 28px; background: #F0AB00; border-radius: 50%; flex-shrink: 0; }
+.brand-title { font-size: 15px; font-weight: 700; }
+.brand-sub { font-size: 11px; color: #aac8e0; }
+.user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
+.topbar a.signout { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 14px; cursor: pointer; }
+
+/* ── Screens ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ══ LOGIN ══ */
+#screen-login { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 56px); background: #00335B; }
+.login-card { background: white; border-radius: 14px; padding: 40px; width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+.login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.login-logo .dot { width: 36px; height: 36px; }
+.login-logo-text { font-size: 17px; font-weight: 700; color: #00335B; }
+.login-logo-sub { font-size: 11px; color: #999; }
+.login-card h2 { font-size: 22px; color: #00335B; margin-bottom: 5px; }
+.login-card p { color: #777; font-size: 13px; margin-bottom: 22px; }
+.field-label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block; }
+.login-card select { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; color: #333; margin-bottom: 20px; background: white; }
+.login-card select:focus { outline: none; border-color: #007DB8; }
+.btn-primary { width: 100%; padding: 14px; background: #00335B; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-primary:hover { background: #007DB8; }
+.login-footer { font-size: 11px; color: #bbb; text-align: center; margin-top: 18px; }
+.demo-hint { background: #fffbe6; border: 1px solid #F0AB00; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; font-size: 12px; color: #7a5c00; line-height: 1.6; }
+.demo-hint strong { display: block; margin-bottom: 4px; color: #5a4000; }
+
+/* ══ PROGRESS BAR ══ */
+.prog-bar-wrap { background: #00335B; padding: 0 24px 14px; }
+.prog-label { font-size: 11px; color: #aac8e0; margin-bottom: 5px; }
+.prog-track { background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; }
+.prog-fill { background: #F0AB00; height: 6px; border-radius: 4px; transition: width 0.4s ease; }
+.step-dots { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+.sdot { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; transition: background 0.3s; font-weight: 700; }
+.sdot.done { background: #F0AB00; color: #00335B; }
+.sdot.active { background: #007DB8; }
+
+/* ══ AGENT LAYOUT ══ */
+.agent-wrap { max-width: 1100px; margin: 24px auto; padding: 0 20px; display: flex; gap: 20px; }
+.chat-col { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.side-col { width: 270px; display: flex; flex-direction: column; gap: 14px; }
+
+.chat-window { background: white; border-radius: 12px; padding: 20px; min-height: 400px; max-height: 460px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.msg-wrap { display: flex; flex-direction: column; }
+.msg-wrap.user { align-items: flex-end; }
+.msg-wrap.agent { align-items: flex-start; }
+.msg-label { font-size: 10px; font-weight: 700; color: #888; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.msg-wrap.agent .msg-label { color: #007DB8; }
+.msg-wrap.user .msg-label { color: #F0AB00; }
+.msg-bubble { max-width: 86%; padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.65; }
+.msg-bubble.agent-bubble { background: #e8f4fb; color: #1a1a1a; border-bottom-left-radius: 3px; }
+.msg-bubble.user-bubble { background: #00335B; color: white; border-bottom-right-radius: 3px; }
+
+.kpi-hdr { margin-bottom: 6px; }
+.kpi-num { font-size: 11px; font-weight: 700; color: #007DB8; text-transform: uppercase; }
+.kpi-name { font-size: 15px; font-weight: 700; color: #00335B; display: block; margin: 3px 0 5px; }
+.kpi-target { font-size: 11px; color: #666; background: #f0f4f8; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-right: 6px; }
+.kpi-cat { font-size: 11px; color: #888; background: #fff3e0; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+.prior-box { background: #fffbe6; border-left: 3px solid #F0AB00; padding: 8px 12px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #555; line-height: 1.5; }
+.prior-lbl { font-size: 10px; font-weight: 700; color: #c87d00; text-transform: uppercase; display: block; margin-bottom: 3px; }
+
+.typing-dots { display: flex; gap: 5px; align-items: center; padding: 6px 0; }
+.typing-dots span { width: 7px; height: 7px; border-radius: 50%; background: #007DB8; animation: tdot 1.2s infinite; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes tdot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+.input-box { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.input-row { display: flex; gap: 10px; align-items: flex-end; }
+textarea { flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 11px 13px; font-size: 14px; font-family: inherit; resize: none; min-height: 76px; transition: border-color 0.2s; }
+textarea:focus { outline: none; border-color: #007DB8; }
+.send-btn { background: #007DB8; color: white; border: none; border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-weight: 600; min-height: 76px; transition: background 0.2s; white-space: nowrap; }
+.send-btn:hover { background: #00335B; }
+.send-btn:disabled { background: #ccc; cursor: default; }
+.action-row { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.btn { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+.btn-begin { background: #00335B; color: white; }
+.btn-begin:hover { background: #007DB8; }
+.btn-skip { background: #f0f4f8; color: #666; display: none; }
+.btn-skip:hover { background: #dde6ef; }
+.btn-submit { background: #28a745; color: white; display: none; }
+.btn-submit:hover { background: #1e7e34; }
+.btn-submit:disabled { background: #aaa; cursor: default; }
+
+.success-card { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 10px; padding: 18px 20px; color: #155724; font-size: 14px; line-height: 1.6; display: none; }
+.success-card strong { display: block; font-size: 16px; margin-bottom: 6px; }
+.success-card a { color: #0a5c28; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+/* Side cards */
+.side-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.side-title { font-size: 11px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+.info-row:last-child { border-bottom: none; }
+.info-lbl { color: #999; }
+.info-val { font-weight: 600; color: #00335B; }
+.kpi-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #f8f8f8; }
+.kpi-item:last-child { border-bottom: none; }
+.kdot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; flex-shrink: 0; transition: background 0.3s; }
+.kdot.done { background: #28a745; }
+.kdot.active { background: #007DB8; }
+.kpi-item-lbl { color: #777; transition: color 0.3s; }
+.kpi-item-lbl.done { color: #28a745; }
+.kpi-item-lbl.active { color: #007DB8; font-weight: 600; }
+.hint-card { background: #fffbe6; border: 1px solid #F0AB00; border-radius: 12px; padding: 16px; font-size: 12px; color: #7a5c00; line-height: 1.7; }
+.hint-card .side-title { color: #c87d00; }
+
+/* ══ SPONSOR ══ */
+.subbar { background: #007DB8; color: white; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.role-badge { background: rgba(255,255,255,0.2); padding: 4px 14px; border-radius: 12px; font-weight: 700; }
+.sponsor-wrap { max-width: 1180px; margin: 24px auto; padding: 0 20px; }
+.sponsor-wrap h2 { font-size: 21px; color: #00335B; margin-bottom: 4px; }
+.sponsor-sub { color: #777; font-size: 13px; margin-bottom: 22px; }
+.region-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 26px; }
+.rcard { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-top: 4px solid #ddd; }
+.rcard.has-data { border-top-color: #28a745; }
+.rcard.pending { border-top-color: #dc3545; }
+.rcard.live { border-top-color: #007DB8; }
+.rcard-region { font-size: 19px; font-weight: 700; color: #00335B; }
+.rcard-leader { font-size: 12px; color: #999; margin: 4px 0 10px; }
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.status-badge.submitted { background: #d4edda; color: #155724; }
+.status-badge.sample { background: #fff3cd; color: #856404; }
+.status-badge.pending { background: #f8d7da; color: #721c24; }
+.status-badge.live { background: #cce5ff; color: #004085; }
+
+.kpi-section { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 22px; }
+.kpi-section h3 { font-size: 15px; color: #00335B; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #f0f4f8; }
+.region-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.rtab { padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid #e0e0e0; background: white; color: #666; transition: all 0.2s; }
+.rtab.active { background: #00335B; color: white; border-color: #00335B; }
+.rtab:hover:not(.active) { border-color: #007DB8; color: #007DB8; }
+.region-panel { display: none; }
+.region-panel.active { display: block; }
+.kpi-tbl { width: 100%; border-collapse: collapse; }
+.kpi-tbl th { background: #f8f9fa; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e0e0e0; }
+.kpi-tbl td { padding: 12px 14px; border-bottom: 1px solid #f5f5f5; font-size: 13px; vertical-align: top; }
+.kpi-tbl tr:last-child td { border-bottom: none; }
+.kpi-tbl-name { font-weight: 600; color: #00335B; }
+.kpi-tbl-cat { font-size: 10px; color: #aaa; background: #f0f4f8; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 3px; }
+.kpi-val { font-size: 16px; font-weight: 700; color: #007DB8; }
+.src-tag { font-size: 10px; color: #bbb; background: #f5f5f5; padding: 2px 6px; border-radius: 3px; margin-left: 5px; }
+.no-data { color: #ccc; font-style: italic; font-size: 12px; }
+.narrative-text { color: #555; line-height: 1.55; }
+
+.approve-box { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.approve-info h3 { font-size: 15px; color: #00335B; margin-bottom: 6px; }
+.approve-info p { font-size: 13px; color: #777; }
+.comp-bar-wrap { margin-top: 10px; }
+.comp-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
+.comp-fill { height: 100%; background: #28a745; border-radius: 4px; }
+.comp-label { font-size: 12px; color: #666; margin-top: 5px; }
+.approve-btn { background: #28a745; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.approve-btn:hover { background: #1e7e34; }
+.approve-btn:disabled { background: #aaa; cursor: default; }
+.approve-success { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px 20px; color: #155724; font-size: 13px; margin-top: 14px; display: none; line-height: 1.7; }
+.approve-success strong { display: block; font-size: 15px; margin-bottom: 5px; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR (shared) ══════════════════════════════════════════════ -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="brand">
+    <div class="dot"></div>
+    <div>
+      <div class="brand-title">GTM26 KPI Status Agent</div>
+      <div class="brand-sub">SAP IM Regional Strategy &amp; Programs</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;">
+    <div class="user-pill" id="topbar-user"></div>
+    <a class="signout" onclick="goLogin()">Sign out</a>
+  </div>
+</div>
+
+<!-- ══ SCREEN: LOGIN ══════════════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="dot"></div>
+      <div>
+        <div class="login-logo-text">GTM26 KPI Status Agent</div>
+        <div class="login-logo-sub">SAP IM Regional Strategy &amp; Programs · Prototype</div>
+      </div>
+    </div>
+    <h2>Sign In</h2>
+    <p>Select your name to begin your monthly status update or review regional submissions as a Global Sponsor.</p>
+    <div class="demo-hint">
+      <strong>Demo tip</strong>
+      Try <strong>Dan Fagan</strong> to experience the Regional Leader flow, or <strong>Thomas Pfister</strong> for the Global Sponsor approval view.
+    </div>
+    <label class="field-label">Select your name</label>
+    <select id="login-select">
+      <option value="">— Select —</option>
+      <optgroup label="Regional Role Leaders">
+        <option value="dan_mee">Dan Fagan — EA / MEE</option>
+        <option value="sara_amer">Sara Mitchell — EA / AMER</option>
+        <option value="liu_apac">Liu Wei — EA / APAC</option>
+        <option value="anna_emea">Anna Bergmann — EA / EMEA</option>
+        <option value="raj_mee">Raj Sharma — DA / MEE</option>
+        <option value="tom_amer">Tom Bradley — DA / AMER</option>
+        <option value="mei_apac">Mei Tanaka — CEP / APAC</option>
+        <option value="alex_emea">Alexander Sieferer — CEP / EMEA</option>
+      </optgroup>
+      <optgroup label="Global Role Sponsors">
+        <option value="gs_ea">Thomas Pfister — Global Sponsor (EA)</option>
+        <option value="gs_da">Jan Manos — Global Sponsor (DA)</option>
+        <option value="gs_cep">Bina Goleminova — Global Sponsor (CEP)</option>
+      </optgroup>
+    </select>
+    <button class="btn-primary" onclick="doLogin()">Continue →</button>
+    <p class="login-footer">GTM26 Role Transformation · SAP Internal · Prototype v1.0</p>
+  <div style="margin-top:18px; text-align:center;">
+    <a href="mailto:subhankar.pattanayak@sap.com?subject=KPI%20Agent%20Demo%20Feedback&body=Hi%20Subhankar%2C%0A%0AHere%20is%20my%20feedback%20on%20the%20GTM26%20KPI%20Conversational%20Agent%20demo%3A%0A%0A1.%20Overall%20impression%3A%0A%0A2.%20What%20worked%20well%3A%0A%0A3.%20What%20needs%20improvement%3A%0A%0A4.%20Any%20missing%20features%3A%0A%0AThanks%2C"
+      style="display:inline-block; background:#007DB8; color:white; text-decoration:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600;">
+      ✉ Share Your Feedback
+    </a>
+  </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: AGENT (Regional Leader) ═══════════════════════════════ -->
+<div id="screen-agent" class="screen">
+  <div class="prog-bar-wrap">
+    <div class="prog-label" id="prog-label">Starting your session…</div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="step-dots" id="step-dots"></div>
+  </div>
+  <div class="agent-wrap">
+    <div class="chat-col">
+      <div class="chat-window" id="chat-window"></div>
+      <div class="input-box">
+        <div class="input-row">
+          <textarea id="user-input" placeholder="Type your update here… (Press Enter to send)" rows="3"></textarea>
+          <button class="send-btn" id="send-btn" onclick="sendMsg()" disabled>Send →</button>
+        </div>
+        <div class="action-row">
+          <button class="btn btn-begin" id="btn-begin" onclick="startKpis()">Begin Update →</button>
+          <button class="btn btn-skip" id="btn-skip" onclick="skipKpi()">Skip this KPI</button>
+          <button class="btn btn-submit" id="btn-submit" onclick="submitAll()">Submit to Sponsor ✓</button>
+        </div>
+      </div>
+      <div class="success-card" id="success-card">
+        <strong>✓ Submitted successfully!</strong>
+        <span id="success-text"></span><br><br>
+        <a onclick="goLogin()">← Back to login</a>
+      </div>
+    </div>
+    <div class="side-col">
+      <div class="side-card">
+        <div class="side-title">Your Details</div>
+        <div id="user-details"></div>
+      </div>
+      <div class="side-card">
+        <div class="side-title">KPI Checklist</div>
+        <div id="kpi-checklist"></div>
+      </div>
+      <div class="hint-card">
+        <div class="side-title">How this works</div>
+        I'll walk you through each KPI and show what you said last month. Update or confirm each one, then submit. Your Global Role Sponsor will review before the report is generated.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: SPONSOR DASHBOARD ═════════════════════════════════════ -->
+<div id="screen-sponsor" class="screen">
+  <div class="subbar">
+    <span>Global Role Sponsor Dashboard</span>
+    <span class="role-badge" id="sponsor-role-badge"></span>
+  </div>
+  <div class="sponsor-wrap">
+    <h2 id="sponsor-h2"></h2>
+    <p class="sponsor-sub">Review all 4 regional submissions below. Once satisfied, approve to trigger PowerPoint generation and delivery to senior leadership.</p>
+    <div class="region-cards" id="region-cards"></div>
+    <div class="kpi-section">
+      <h3>KPI Detail by Region</h3>
+      <div class="region-tabs" id="region-tabs"></div>
+      <div id="region-panels"></div>
+    </div>
+    <div class="approve-box">
+      <div class="approve-info">
+        <h3>Approve &amp; Generate Report</h3>
+        <p>Approving will auto-generate the regional and global PPT reports and send them to Jan Manos &amp; Thomas Pfister.</p>
+        <div class="comp-bar-wrap">
+          <div class="comp-bar"><div class="comp-fill" id="comp-fill" style="width:0%"></div></div>
+          <div class="comp-label" id="comp-label"></div>
+        </div>
+      </div>
+      <button class="approve-btn" id="approve-btn" onclick="approveAll()">Approve &amp; Generate PPT ✓</button>
+    </div>
+    <div class="approve-success" id="approve-success">
+      <strong>✓ All submissions approved!</strong>
+      The <span id="approved-role-name"></span> status report for September 2026 has been approved.
+      PowerPoint reports (regional + global consolidated) have been generated and will be delivered to Jan Manos &amp; Thomas Pfister.<br><br>
+      <em>In the full BTP-hosted version, the PPT would be auto-attached and emailed automatically.</em><br><br>
+      <a onclick="goLogin()" style="color:#0a5c28;font-weight:700;cursor:pointer;">← Back to login</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ DATA ══════════════════════════════════════════════════════════════════
+const USERS = {
+  dan_mee:   { id:'dan_mee',  name:'Dan Fagan',         role:'EA',  region:'MEE',  type:'leader' },
+  sara_amer: { id:'sara_amer',name:'Sara Mitchell',      role:'EA',  region:'AMER', type:'leader' },
+  liu_apac:  { id:'liu_apac', name:'Liu Wei',            role:'EA',  region:'APAC', type:'leader' },
+  anna_emea: { id:'anna_emea',name:'Anna Bergmann',      role:'EA',  region:'EMEA', type:'leader' },
+  raj_mee:   { id:'raj_mee',  name:'Raj Sharma',         role:'DA',  region:'MEE',  type:'leader' },
+  tom_amer:  { id:'tom_amer', name:'Tom Bradley',        role:'DA',  region:'AMER', type:'leader' },
+  mei_apac:  { id:'mei_apac', name:'Mei Tanaka',         role:'CEP', region:'APAC', type:'leader' },
+  alex_emea: { id:'alex_emea',name:'Alexander Sieferer', role:'CEP', region:'EMEA', type:'leader' },
+  gs_ea:     { id:'gs_ea',    name:'Thomas Pfister',     role:'EA',  type:'sponsor' },
+  gs_da:     { id:'gs_da',    name:'Jan Manos',          role:'DA',  type:'sponsor' },
+  gs_cep:    { id:'gs_cep',   name:'Bina Goleminova',    role:'CEP', type:'sponsor' },
+};
+
+const ROLES = {
+  EA: {
+    name: 'Enterprise Architect',
+    kpis: [
+      { id:'ea_joule',     label:'Joule Activation Rate',         target:'50%', category:'Tool Adoption' },
+      { id:'ea_ai_plan',   label:'AI Adoption Plan Completion',   target:'60%', category:'Tool Adoption' },
+      { id:'ea_gainsight', label:'Gainsight Touchpoint Coverage', target:'75%', category:'Coverage' },
+      { id:'ea_coverage',  label:'EA Customer Coverage Ratio',    target:'70%', category:'Coverage' },
+      { id:'ea_enablement',label:'Q3 Enablement Completion',      target:'80%', category:'Learning' },
+      { id:'ea_pipeline',  label:'EA-Influenced Pipeline Growth',  target:'15%', category:'Business Impact' },
+    ]
+  },
+  DA: {
+    name: 'Digital Advisor',
+    kpis: [
+      { id:'da_joule',     label:'Joule Activation Rate',        target:'45%', category:'Tool Adoption' },
+      { id:'da_ai_plan',   label:'AI Adoption Plan Completion',  target:'55%', category:'Tool Adoption' },
+      { id:'da_coverage',  label:'DA Customer Coverage Ratio',   target:'65%', category:'Coverage' },
+      { id:'da_enablement',label:'Q3 Enablement Completion',     target:'75%', category:'Learning' },
+      { id:'da_pipeline',  label:'DA-Influenced Pipeline Growth', target:'12%', category:'Business Impact' },
+    ]
+  },
+  CEP: {
+    name: 'Customer Engagement Partner',
+    kpis: [
+      { id:'cep_joule',     label:'Joule Activation Rate',    target:'55%', category:'Tool Adoption' },
+      { id:'cep_nps',       label:'Customer NPS Score',       target:'45',  category:'Business Impact' },
+      { id:'cep_coverage',  label:'CEP Coverage Ratio',       target:'80%', category:'Coverage' },
+      { id:'cep_enablement',label:'Q3 Enablement Completion', target:'85%', category:'Learning' },
+    ]
+  }
+};
+
+const HISTORY = {
+  EA_MEE: { leader:'Dan Fagan', kpis: {
+    ea_joule:     { value:'39%', narrative:'MEE at 39%, pushing to 45% via Oct enablement wave. 3 large accounts activated this month.' },
+    ea_ai_plan:   { value:'48%', narrative:'Targeting 55% by Q3 close. 12 accounts have submitted AI adoption plans this month.' },
+    ea_gainsight: { value:'68%', narrative:'Improved from 62%. Gainsight adoption campaign running across MEE EAs.' },
+    ea_coverage:  { value:'69%', narrative:'Strong pipeline. 5 new EA-covered accounts added in August.' },
+    ea_enablement:{ value:'72%', narrative:'Slightly behind target. Two cohorts scheduled for Sep completion.' },
+    ea_pipeline:  { value:'11%', narrative:'Growing steadily. Q4 expected to close above target with 3 key deals in pipeline.' },
+  }},
+  EA_AMER: { leader:'Sara Mitchell', kpis: {
+    ea_joule:     { value:'44%', narrative:'AMER leading MEE. Strong adoption in East Coast accounts.' },
+    ea_ai_plan:   { value:'51%', narrative:'On track. Large enterprise accounts driving the numbers.' },
+    ea_gainsight: { value:'71%', narrative:'Above target. Team well-trained on Gainsight workflow.' },
+    ea_coverage:  { value:'73%', narrative:'Best region this quarter. Active pipeline across all segments.' },
+    ea_enablement:{ value:'80%', narrative:'Target met. All AMER EAs completed Q3 mandatory learning.' },
+    ea_pipeline:  { value:'16%', narrative:'Above target. Q3 closes looking very strong.' },
+  }},
+  DA_MEE: { leader:'Raj Sharma', kpis: {
+    da_joule:     { value:'35%', narrative:'Below target. Enablement drive planned for October.' },
+    da_ai_plan:   { value:'42%', narrative:'Several accounts in progress. Expecting jump next month.' },
+    da_coverage:  { value:'60%', narrative:'Working to close gap. 8 new accounts being onboarded.' },
+    da_enablement:{ value:'68%', narrative:'2 cohorts remaining in Sep. On track to hit target.' },
+    da_pipeline:  { value:'10%', narrative:'Slightly below. 2 large deals expected to close in Oct.' },
+  }},
+  DA_AMER: { leader:'Tom Bradley', kpis: {
+    da_joule:     { value:'41%', narrative:'Good progress. West Coast accounts driving adoption.' },
+    da_ai_plan:   { value:'49%', narrative:'On track. Several mid-market accounts completing plans.' },
+    da_coverage:  { value:'63%', narrative:'Close to target. 4 new accounts added.' },
+    da_enablement:{ value:'72%', narrative:'Final cohort completes end of September.' },
+    da_pipeline:  { value:'11%', narrative:'Steady growth. 3 deals in late stages.' },
+  }},
+  CEP_APAC: { leader:'Mei Tanaka', kpis: {
+    cep_joule:     { value:'48%', narrative:'APAC leading region. Strong executive sponsorship.' },
+    cep_nps:       { value:'42',  narrative:'Slightly below target. Action plan in place for Q4.' },
+    cep_coverage:  { value:'76%', narrative:'Good progress. 6 new accounts added this month.' },
+    cep_enablement:{ value:'81%', narrative:'On track. Final cohort scheduled for Sep 25.' },
+  }},
+  CEP_EMEA: { leader:'Alexander Sieferer', kpis: {
+    cep_joule:     { value:'51%', narrative:'Above target. EMEA EA collaboration driving joint adoption.' },
+    cep_nps:       { value:'44',  narrative:'Just below target. Customer satisfaction initiative launched.' },
+    cep_coverage:  { value:'78%', narrative:'Close to target. Strong Q3 activity across accounts.' },
+    cep_enablement:{ value:'83%', narrative:'Nearly complete. 2 stragglers to finish by Sep 30.' },
+  }},
+};
+
+// Live submissions stored in memory for this demo session
+const liveSubmissions = {};
+
+// ══ STATE ══════════════════════════════════════════════════════════════════
+let currentUser = null;
+let kpiList = [];
+let kpiIndex = 0;
+let responses = {};
+let sessionPhase = 'greeting'; // greeting | collecting | summary | done
+
+// ══ NAVIGATION ════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function goLogin() {
+  document.getElementById('topbar').style.display = 'none';
+  showScreen('login');
+  document.getElementById('login-select').value = '';
+  currentUser = null;
+}
+
+function doLogin() {
+  const uid = document.getElementById('login-select').value;
+  if (!uid) return alert('Please select your name.');
+  currentUser = USERS[uid];
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('topbar-user').textContent = currentUser.name + (currentUser.region ? ' · ' + currentUser.role + ' / ' + currentUser.region : ' · Sponsor');
+  if (currentUser.type === 'sponsor') {
+    buildSponsorScreen();
+    showScreen('sponsor');
+  } else {
+    buildAgentScreen();
+    showScreen('agent');
+  }
+}
+
+// ══ AGENT SCREEN ══════════════════════════════════════════════════════════
+function buildAgentScreen() {
+  const role = ROLES[currentUser.role];
+  kpiList = role.kpis;
+  kpiIndex = 0;
+  responses = {};
+  sessionPhase = 'greeting';
+
+  // Reset UI
+  document.getElementById('chat-window').innerHTML = '';
+  document.getElementById('user-input').value = '';
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('btn-begin').style.display = 'inline-block';
+  document.getElementById('btn-skip').style.display = 'none';
+  document.getElementById('btn-submit').style.display = 'none';
+  document.getElementById('success-card').style.display = 'none';
+  document.querySelector('.input-box').style.display = 'block';
+
+  // Step dots
+  const dots = document.getElementById('step-dots');
+  dots.innerHTML = '';
+  kpiList.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'sdot'; d.id = 'sdot-' + i; d.textContent = i + 1;
+    dots.appendChild(d);
+  });
+
+  // User details panel
+  const ud = document.getElementById('user-details');
+  ud.innerHTML = [
+    ['Name', currentUser.name], ['Role', role.name],
+    ['Region', currentUser.region], ['Report month', 'Sep 2026'], ['Prior month', 'Aug 2026']
+  ].map(([l,v]) => `<div class="info-row"><span class="info-lbl">${l}</span><span class="info-val">${v}</span></div>`).join('');
+
+  // Checklist
+  buildChecklist(-1);
+  updateProgress(0, kpiList.length, 'Starting your session…');
+
+  // Greeting message
+  setTimeout(() => {
+    agentSay(`Hi <strong>${currentUser.name.split(' ')[0]}</strong>! It's time for your monthly
+      <strong>${role.name} status update</strong> for <strong>${currentUser.region}</strong> — September 2026.<br><br>
+      I'll walk you through <strong>${kpiList.length} KPIs</strong> one by one.
+      For each one I'll show what you said last month so you can update or confirm.<br><br>
+      Ready to begin?`);
+  }, 400);
+}
+
+function buildChecklist(doneUpTo) {
+  const cl = document.getElementById('kpi-checklist');
+  cl.innerHTML = kpiList.map((k, i) => {
+    const state = i < doneUpTo ? 'done' : i === doneUpTo ? 'active' : '';
+    return `<div class="kpi-item">
+      <div class="kdot ${state}" id="kdot-${i}"></div>
+      <span class="kpi-item-lbl ${state}" id="klbl-${i}">${k.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateProgress(done, total, labelText) {
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = labelText ||
+    (done === 0 ? 'Ready to begin…' : done >= total ? 'All KPIs captured — ready to submit!' : `KPI ${done} of ${total} completed`);
+  for (let i = 0; i < total; i++) {
+    const d = document.getElementById('sdot-' + i);
+    if (d) d.className = 'sdot' + (i < done ? ' done' : i === done ? ' active' : '');
+  }
+}
+
+function agentSay(html, delay) {
+  if (delay) { setTimeout(() => agentSay(html), delay); return; }
+  const cw = document.getElementById('chat-window');
+  const w = document.createElement('div'); w.className = 'msg-wrap agent';
+  w.innerHTML = `<div class="msg-label">Agent</div><div class="msg-bubble agent-bubble">${html}</div>`;
+  cw.appendChild(w); cw.scrollTop = cw.scrollHeight;
+}
+
+function userSay(text) {
+  const cw = document.getElementById('chat-window');
+  const w = document.createElement('div'); w.className = 'msg-wrap user';
+  w.innerHTML = `<div class="msg-label">You</div><div class="msg-bubble user-bubble">${text}</div>`;
+  cw.appendChild(w); cw.scrollTop = cw.scrollHeight;
+}
+
+function showTyping() {
+  const cw = document.getElementById('chat-window');
+  const t = document.createElement('div'); t.id = 'typing'; t.className = 'msg-wrap agent';
+  t.innerHTML = `<div class="msg-label">Agent</div><div class="msg-bubble agent-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
+  cw.appendChild(t); cw.scrollTop = cw.scrollHeight;
+}
+function hideTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+function startKpis() {
+  document.getElementById('btn-begin').style.display = 'none';
+  userSay("Yes, let's begin!");
+  sessionPhase = 'collecting';
+  setTimeout(() => askKpi(0), 600);
+}
+
+function askKpi(idx) {
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    const kpi = kpiList[idx];
+    const histKey = currentUser.role + '_' + currentUser.region;
+    const hist = HISTORY[histKey];
+    const prior = hist && hist.kpis[kpi.id];
+    const priorHtml = prior
+      ? `<div class="prior-box"><span class="prior-lbl">Last month you said:</span><em>"${prior.narrative}"</em></div>`
+      : `<div class="prior-box"><span class="prior-lbl">No prior data</span><em>First time reporting this KPI.</em></div>`;
+    agentSay(`<div class="kpi-hdr">
+        <span class="kpi-num">KPI ${idx + 1} of ${kpiList.length}</span>
+        <span class="kpi-name">${kpi.label}</span>
+        <span class="kpi-target">Target: ${kpi.target}</span>
+        <span class="kpi-cat">${kpi.category}</span>
+      </div>${priorHtml}<br>What's your update for this month?`);
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('btn-skip').style.display = 'inline-block';
+    document.getElementById('user-input').focus();
+    updateProgress(idx, kpiList.length);
+    buildChecklist(idx);
+  }, 700);
+}
+
+function sendMsg() {
+  const inp = document.getElementById('user-input');
+  const msg = inp.value.trim();
+  if (!msg || sessionPhase !== 'collecting') return;
+  inp.value = '';
+  document.getElementById('send-btn').disabled = true;
+  document.getElementById('btn-skip').style.display = 'none';
+  userSay(msg);
+  saveKpiResponse(msg);
+}
+
+function skipKpi() {
+  document.getElementById('btn-skip').style.display = 'none';
+  userSay('[Skipped — no update this month]');
+  saveKpiResponse('[Skipped]');
+}
+
+function saveKpiResponse(text) {
+  const kpi = kpiList[kpiIndex];
+  const valMatch = text.match(/(\d+\.?\d*\s*%|\d+)/);
+  responses[kpi.id] = { value: valMatch ? valMatch[1] : '—', narrative: text };
+
+  // Update checklist dot
+  const dot = document.getElementById('kdot-' + kpiIndex);
+  const lbl = document.getElementById('klbl-' + kpiIndex);
+  if (dot) { dot.className = 'kdot done'; }
+  if (lbl) { lbl.className = 'kpi-item-lbl done'; }
+
+  kpiIndex++;
+  updateProgress(kpiIndex, kpiList.length);
+
+  if (kpiIndex < kpiList.length) {
+    setTimeout(() => askKpi(kpiIndex), 600);
+  } else {
+    sessionPhase = 'summary';
+    showSummary();
+  }
+}
+
+function showSummary() {
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    const rows = kpiList.map((k, i) =>
+      `<strong>${k.label}:</strong> ${responses[k.id] ? responses[k.id].narrative : '—'}<br>`
+    ).join('');
+    agentSay(`All <strong>${kpiList.length} KPIs</strong> captured! Here's your summary:<br><br>${rows}<br>Ready to submit to your Global Role Sponsor?`);
+    document.getElementById('btn-submit').style.display = 'inline-block';
+    buildChecklist(kpiList.length);
+    updateProgress(kpiList.length, kpiList.length, 'All KPIs captured — ready to submit!');
+  }, 800);
+}
+
+function submitAll() {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  const key = currentUser.role + '_' + currentUser.region;
+  liveSubmissions[key] = {
+    leader: currentUser.name, role: currentUser.role, region: currentUser.region,
+    month: 'September 2026', status: 'pending_approval', kpis: responses
+  };
+  setTimeout(() => {
+    document.querySelector('.input-box').style.display = 'none';
+    agentSay(`✓ Submitted! Your <strong>${ROLES[currentUser.role].name}</strong> status for <strong>${currentUser.region}</strong> has been sent to the Global Role Sponsor for review. You'll receive a confirmation once approved.`);
+    const sc = document.getElementById('success-card');
+    sc.style.display = 'block';
+    document.getElementById('success-text').textContent =
+      `Your ${ROLES[currentUser.role].name} status for ${currentUser.region} (September 2026) has been sent to the Global Role Sponsor.`;
+    sessionPhase = 'done';
+  }, 800);
+}
+
+document.getElementById('user-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!document.getElementById('send-btn').disabled) sendMsg();
+  }
+});
+
+// ══ SPONSOR SCREEN ════════════════════════════════════════════════════════
+function buildSponsorScreen() {
+  const role = currentUser.role;
+  const roleInfo = ROLES[role];
+  const regions = ['MEE', 'AMER', 'APAC', 'EMEA'];
+
+  document.getElementById('sponsor-role-badge').textContent = roleInfo.name + ' (' + role + ')';
+  document.getElementById('sponsor-h2').textContent = 'September 2026 — ' + roleInfo.name + ' Status Review';
+
+  // Build region data: live submission > history > pending
+  function getRegionData(region) {
+    const liveKey = role + '_' + region;
+    if (liveSubmissions[liveKey]) return { source: 'live', data: liveSubmissions[liveKey] };
+    const histKey = role + '_' + region;
+    if (HISTORY[histKey]) return { source: 'sample', data: { leader: HISTORY[histKey].leader, kpis: HISTORY[histKey].kpis } };
+    return { source: 'pending', data: null };
+  }
+
+  const regionData = {};
+  regions.forEach(r => { regionData[r] = getRegionData(r); });
+
+  // Region status cards
+  const leaderMap = {
+    EA: { MEE:'Dan Fagan', AMER:'Sara Mitchell', APAC:'Liu Wei', EMEA:'Anna Bergmann' },
+    DA: { MEE:'Raj Sharma', AMER:'Tom Bradley', APAC:'—', EMEA:'—' },
+    CEP:{ MEE:'—', AMER:'—', APAC:'Mei Tanaka', EMEA:'Alexander Sieferer' },
+  };
+  const rc = document.getElementById('region-cards');
+  rc.innerHTML = regions.map(r => {
+    const d = regionData[r];
+    const cls = d.source === 'live' ? 'live' : d.source === 'sample' ? 'has-data' : 'pending';
+    const badgeCls = d.source === 'live' ? 'live' : d.source === 'sample' ? 'sample' : 'pending';
+    const badgeTxt = d.source === 'live' ? '✓ Live Submission' : d.source === 'sample' ? 'Aug Sample Data' : '✗ Pending';
+    return `<div class="rcard ${cls}">
+      <div class="rcard-region">${r}</div>
+      <div class="rcard-leader">${leaderMap[role][r] || '—'}</div>
+      <span class="status-badge ${badgeCls}">${badgeTxt}</span>
+    </div>`;
+  }).join('');
+
+  // Region tabs & panels
+  const tabs = document.getElementById('region-tabs');
+  const panels = document.getElementById('region-panels');
+  tabs.innerHTML = ''; panels.innerHTML = '';
+
+  regions.forEach((r, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'rtab' + (i === 0 ? ' active' : '');
+    tab.textContent = r;
+    tab.onclick = function() {
+      document.querySelectorAll('.rtab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.region-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('rpanel-' + r).classList.add('active');
+    };
+    tabs.appendChild(tab);
+
+    const d = regionData[r];
+    const panel = document.createElement('div');
+    panel.className = 'region-panel' + (i === 0 ? ' active' : '');
+    panel.id = 'rpanel-' + r;
+
+    if (d.data) {
+      const srcTag = d.source === 'live' ? '<span class="src-tag">Sep — Live</span>' : '<span class="src-tag">Aug sample</span>';
+      panel.innerHTML = `<table class="kpi-tbl">
+        <thead><tr><th style="width:28%">KPI</th><th style="width:12%">Target</th><th style="width:13%">Value ${srcTag}</th><th>Narrative</th></tr></thead>
+        <tbody>${roleInfo.kpis.map(kpi => {
+          const entry = d.data.kpis[kpi.id];
+          return `<tr>
+            <td><div class="kpi-tbl-name">${kpi.label}</div><div class="kpi-tbl-cat">${kpi.category}</div></td>
+            <td style="color:#999;font-size:12px">${kpi.target}</td>
+            <td>${entry ? `<span class="kpi-val">${entry.value}</span>` : '<span class="no-data">—</span>'}</td>
+            <td class="narrative-text">${entry ? entry.narrative : '<span class="no-data">Not submitted</span>'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    } else {
+      panel.innerHTML = `<p style="color:#ccc;padding:24px;text-align:center;font-style:italic;">No submission received from ${r} yet.</p>`;
+    }
+    panels.appendChild(panel);
+  });
+
+  // Completion bar
+  const dataCount = regions.filter(r => regionData[r].data).length;
+  document.getElementById('comp-fill').style.width = (dataCount / regions.length * 100) + '%';
+  document.getElementById('comp-label').textContent = `Regions with data: ${dataCount} / ${regions.length}`;
+
+  document.getElementById('approve-btn').disabled = false;
+  document.getElementById('approve-btn').textContent = 'Approve & Generate PPT ✓';
+  document.getElementById('approve-success').style.display = 'none';
+}
+
+function approveAll() {
+  const btn = document.getElementById('approve-btn');
+  btn.disabled = true; btn.textContent = 'Approving…';
+  setTimeout(() => {
+    btn.textContent = '✓ Approved';
+    document.getElementById('approved-role-name').textContent = ROLES[currentUser.role].name;
+    document.getElementById('approve-success').style.display = 'block';
+    document.getElementById('approve-success').scrollIntoView({ behavior: 'smooth' });
+  }, 1000);
+}
+</script>
+</body>
+</html>
