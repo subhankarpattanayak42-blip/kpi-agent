@@ -42,12 +42,12 @@
     <div class="section-label">Login as a Regional Leader</div>
     <select name="user_id" id="user_select">
       <option value="">— Select your name —</option>
-      {% for leader in stakeholders.regional_leaders %}
+      {% for leader in leaders %}
       <option value="{{ leader.id }}">{{ leader.name }} — {{ leader.role }} / {{ leader.region }}</option>
       {% endfor %}
       <option disabled>──────────────────────</option>
-      {% for sponsor in stakeholders.global_sponsors %}
-      <option value="{{ sponsor.id }}">{{ sponsor.name }} — Global Sponsor ({{ sponsor.role }})</option>
+      {% for sponsor in sponsors %}
+      <option value="{{ sponsor.id }}">{{ sponsor.name }} — Global Sponsor ({{ sponsor.managed_role or sponsor.role }})</option>
       {% endfor %}
     </select>
     <button type="submit">Continue →</button>
