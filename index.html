@@ -17,6 +17,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; min-heig
 .user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
 .topbar a.signout { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 14px; cursor: pointer; }
 
+/* ── Floating Feedback Button ── */
+.feedback-fab { position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: #F0AB00; color: #00335B; border: none; border-radius: 50px; padding: 12px 20px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.15s; text-decoration: none; }
+.feedback-fab:hover { background: #e09b00; transform: translateY(-2px); }
+
 /* ── Screens ── */
 .screen { display: none; }
 .screen.active { display: block; }
@@ -753,5 +757,8 @@ function approveAll() {
   }, 1000);
 }
 </script>
+<a class="feedback-fab" href="mailto:subhankar.pattanayak@sap.com?subject=KPI%20Agent%20Demo%20Feedback&body=Hi%20Subhankar%2C%0A%0AHere%20is%20my%20feedback%20on%20the%20GTM26%20KPI%20Conversational%20Agent%20demo%3A%0A%0A1.%20Overall%20impression%3A%0A%0A2.%20What%20worked%20well%3A%0A%0A3.%20What%20needs%20improvement%3A%0A%0A4.%20Any%20missing%20features%3A%0A%0AThanks%2C">
+  ✉ Feedback
+</a>
 </body>
 </html>
