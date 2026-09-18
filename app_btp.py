@@ -2,9 +2,9 @@
 KPI Agent — BTP Production Backend
 Flask + PostgreSQL (shared prompt-db) + SAP AI Core
 """
-import os, json, uuid, re, base64, logging
+import os, json, uuid, re, base64, logging, tempfile
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 import psycopg2
 import psycopg2.extras
 import requests
@@ -881,6 +881,84 @@ def admin_get_submissions():
             if s.get(ts_field) and not isinstance(s[ts_field], str):
                 s[ts_field] = s[ts_field].isoformat()
     return jsonify({"submissions": subs, "kpis_by_role": kpis_by_role})
+
+@app.route("/api/generate-ppt", methods=["POST"])
+def generate_ppt():
+    if "user" not in session or session.get("role_type") != "sponsor":
+        return jsonify({"error": "not authorised"}), 401
+    user = session["user"]
+    managed_role = user.get("managed_role") or user.get("role")
+
+    try:
+        from ppt_generator import generate_role_ppt
+    except ImportError as e:
+        return jsonify({"error": "ppt_generator not available: " + str(e)}), 500
+
+    try:
+        regions = db_get_regions()
+        kpis = [dict(k) for k in db_get_kpis(managed_role)]
+        live_subs = db_get_submissions(managed_role)
+    except Exception as e:
+        log.error("PPT DB error: %s", e)
+        return jsonify({"error": "DB error"}), 500
+
+    # Build submissions dict keyed by region (same logic as sponsor_dashboard)
+    live_by_region = {}
+    for s in live_subs:
+        region = s["region"] if isinstance(s, dict) else s[5]
+        live_by_region[region] = dict(s) if isinstance(s, dict) else {
+            "region": s[5], "status": s[6], "kpi_data": s[7]
+        }
+
+    submissions = {}
+    for region in regions:
+        if region in live_by_region:
+            row = live_by_region[region]
+            raw = row.get("kpi_data", {})
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw)
+                except Exception:
+                    raw = {}
+            submissions[region] = {"kpi_data": raw, "status": row.get("status", "")}
+        else:
+            hist = db_get_history(managed_role, region)
+            if hist:
+                if isinstance(hist, str):
+                    try:
+                        hist = json.loads(hist)
+                    except Exception:
+                        hist = {}
+                submissions[region] = {"kpi_data": hist, "status": "sample"}
+
+    month_label = "September 2026"
+    tmp = tempfile.NamedTemporaryFile(
+        suffix=".pptx",
+        delete=False,
+        prefix="KPI_RoleUpdate_{}_".format(managed_role)
+    )
+    tmp.close()
+    try:
+        generate_role_ppt(
+            role=managed_role,
+            sponsor_name=user.get("name", ""),
+            month_label=month_label,
+            submissions=submissions,
+            kpis=kpis,
+            output_path=tmp.name
+        )
+    except Exception as e:
+        log.error("PPT generation failed: %s", e)
+        return jsonify({"error": "PPT generation failed: " + str(e)}), 500
+
+    filename = "KPI_RoleUpdate_{}_Sep2026.pptx".format(managed_role)
+    return send_file(
+        tmp.name,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+
 
 @app.route("/health")
 def health():

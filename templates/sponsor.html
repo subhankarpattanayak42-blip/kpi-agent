@@ -63,6 +63,9 @@
   .approve-btn { background: #28a745; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
   .approve-btn:hover { background: #1e7e34; }
   .approve-btn:disabled { background: #aaa; cursor: default; }
+  .ppt-btn { background: #007DB8; color: white; border: none; padding: 14px 22px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-left: 12px; text-decoration: none; display: inline-block; }
+  .ppt-btn:hover { background: #00335B; }
+  .ppt-btn:disabled { background: #aaa; cursor: default; }
   .completion-bar { height: 8px; background: #e0e0e0; border-radius: 4px; margin: 10px 0; overflow: hidden; }
   .completion-fill { height: 100%; background: #28a745; border-radius: 4px; }
   .success-banner { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px 20px; color: #155724; font-size: 14px; display: none; margin-top: 14px; }
@@ -176,9 +179,14 @@
         <div class="completion-fill" style="width:{{ (submitted_count / regions|length * 100)|int }}%"></div>
       </div>
     </div>
-    <button class="approve-btn" id="approve-btn" onclick="approveAll()">
-      Approve &amp; Generate PPT ✓
-    </button>
+    <div style="display:flex; gap:0; align-items:center; flex-wrap:wrap;">
+      <button class="approve-btn" id="approve-btn" onclick="approveAll()">
+        Approve &amp; Generate PPT ✓
+      </button>
+      <button class="ppt-btn" id="ppt-btn" onclick="downloadPpt()">
+        ⬇ Download PPT
+      </button>
+    </div>
   </div>
   <div class="success-banner" id="success-banner"></div>
 </div>
@@ -189,6 +197,35 @@ function showRegion(region, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('region-' + region).style.display = 'block';
   btn.classList.add('active');
+}
+
+async function downloadPpt() {
+  const btn = document.getElementById('ppt-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  try {
+    const res = await fetch('/api/generate-ppt', { method: 'POST' });
+    if (!res.ok) {
+      const err = await res.json();
+      alert('PPT error: ' + (err.error || res.status));
+      btn.disabled = false;
+      btn.textContent = '⬇ Download PPT';
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'KPI_RoleUpdate_{{ managed_role }}_Sep2026.pptx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Failed to generate PPT: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '⬇ Download PPT';
 }
 
 async function approveAll() {
