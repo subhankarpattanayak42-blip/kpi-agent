@@ -430,21 +430,31 @@ def chat():
 
     if idx < len(kpis):
         kpi = kpis[idx]
-        kpi_id = kpi["id"] if isinstance(kpi, dict) else kpi[0]
+        kpi_id    = kpi["id"]    if isinstance(kpi, dict) else kpi[0]
+        kpi_label = kpi["label"] if isinstance(kpi, dict) else kpi[2]
+        kpi_tgt   = kpi["target"] if isinstance(kpi, dict) else kpi[3]
 
-        # Try AI Core for richer acknowledgement (non-blocking)
-        ai_ack = None
-        try:
-            ai_ack = ai_core_chat([
-                {"role": "system", "content": "You are a helpful KPI collection assistant. Acknowledge the update in one short sentence, be encouraging. No bullet points."},
-                {"role": "user", "content": f"KPI: {kpi['label'] if isinstance(kpi, dict) else kpi[2]}. Update: {user_msg}"}
-            ])
-        except Exception:
-            pass
+        prior_entry = prior.get(kpi_id, {})
+        prior_narrative = prior_entry.get("narrative", "") if prior_entry else ""
+        prior_value = prior_entry.get("value", "") if prior_entry else ""
+
+        # Skip: don't call AI, just record as skipped
+        if user_msg.upper() == "[SKIP]":
+            resolved_narrative = "[Skipped — no update this month]"
+            ai_ack = ""
+        else:
+            # AI interprets the user message in context and returns resolved narrative + ack
+            resolved_narrative, ai_ack = _ai_interpret_kpi_response(
+                kpi_label=kpi_label,
+                kpi_target=kpi_tgt,
+                user_msg=user_msg,
+                prior_narrative=prior_narrative,
+                prior_value=prior_value,
+            )
 
         responses[kpi_id] = {
-            "value": _extract_value(user_msg),
-            "narrative": user_msg,
+            "value": _extract_value(resolved_narrative),
+            "narrative": resolved_narrative,
             "timestamp": datetime.now().isoformat()
         }
         session["responses"] = responses
@@ -455,6 +465,9 @@ def chat():
             reply = _build_kpi_prompt(kpis, next_idx, prior)
             if ai_ack:
                 reply["acknowledgement"] = ai_ack
+            # Show resolved text only if AI changed it from what the user typed
+            if resolved_narrative.strip().lower() != user_msg.strip().lower():
+                reply["resolved_narrative"] = resolved_narrative
             return jsonify(reply)
         else:
             kpi_labels = {
@@ -465,15 +478,78 @@ def chat():
                 f"<b>{kpi_labels.get(kid, kid)}:</b> {v['narrative']}<br>"
                 for kid, v in responses.items()
             )
-            return jsonify({
+            summary_resp = {
                 "type": "summary",
                 "text": (f"All {len(kpis)} KPIs captured! Here's your summary:<br><br>" +
                          summary_lines +
                          "<br>Ready to submit to your Global Role Sponsor?"),
                 "show_submit": True
-            })
+            }
+            if ai_ack:
+                summary_resp["acknowledgement"] = ai_ack
+            if resolved_narrative.strip().lower() != user_msg.strip().lower():
+                summary_resp["resolved_narrative"] = resolved_narrative
+            return jsonify(summary_resp)
 
     return jsonify({"type": "message", "text": "Please use the Submit button to finalise."})
+
+def _ai_interpret_kpi_response(kpi_label, kpi_target, user_msg, prior_narrative, prior_value):
+    """
+    Use AI to resolve what the user actually meant and produce:
+    - resolved_narrative: the final text to save (may reuse prior text if user said "same")
+    - ack: one short encouraging sentence to show the user
+    Falls back gracefully if AI Core is unavailable.
+    """
+    prior_context = ""
+    if prior_narrative:
+        prior_context = f'\nLast month update: "{prior_narrative}" (value: {prior_value})'
+
+    system_prompt = (
+        "You are a KPI data collection assistant. Your job is to interpret what a regional leader "
+        "typed in response to a KPI question, and return a JSON object with two keys:\n"
+        "  \"narrative\": the actual update text to record (a full, clear sentence — not just a number).\n"
+        "  \"ack\": one short encouraging sentence (max 12 words) to show the user, confirming what was captured.\n\n"
+        "Important rules:\n"
+        "- If the user says 'same', 'same as last month', 'no change', 'use last month', 'copy', 'reuse', "
+        "  or anything meaning they want to repeat last month's text — set narrative to the exact last month text.\n"
+        "- If the user gives a short number or %, expand it into a proper sentence using context from the KPI name and target.\n"
+        "- If the user gives a clear full sentence, use it as-is.\n"
+        "- Always return valid JSON only. No markdown, no explanation outside the JSON.\n"
+        "Example: {\"narrative\": \"Joule activation reached 88% this month, close to our 90% target.\", \"ack\": \"Got it — 88% noted, nearly at target!\"}"
+    )
+
+    user_prompt = (
+        f"KPI: {kpi_label}\n"
+        f"Target: {kpi_target}"
+        f"{prior_context}\n"
+        f"User said: \"{user_msg}\""
+    )
+
+    raw = ai_core_chat([
+        {"role": "system", "content": system_prompt},
+        {"role": "user",   "content": user_prompt},
+    ])
+
+    if raw:
+        try:
+            # strip markdown fences if present
+            cleaned = raw.strip().strip("```json").strip("```").strip()
+            data = json.loads(cleaned)
+            narrative = data.get("narrative", "").strip() or user_msg
+            ack = data.get("ack", "").strip()
+            return narrative, ack
+        except Exception:
+            pass
+
+    # fallback: if user said "same"/"no change", reuse prior narrative
+    same_phrases = ["same", "same as last month", "no change", "use last month",
+                    "copy", "reuse", "keep same", "as before", "unchanged"]
+    if user_msg.lower().strip() in same_phrases or any(p in user_msg.lower() for p in same_phrases):
+        narrative = prior_narrative if prior_narrative else user_msg
+        return narrative, "Reusing last month's update."
+
+    return user_msg, ""
+
 
 def _build_kpi_prompt(kpis, idx, prior):
     kpi = kpis[idx]

@@ -287,6 +287,14 @@ function handleResponse(data) {
     updateProgress(0, totalKpis);
   }
   else if (data.type === 'kpi') {
+    // Show AI acknowledgement before the next KPI prompt
+    if (data.acknowledgement) {
+      addMessage(data.acknowledgement, false);
+    }
+    // If AI resolved the narrative to something different from what user typed, show it
+    if (data.resolved_narrative) {
+      addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
+    }
     // Extract KPI label for checklist
     const m = data.text.match(/kpi-name">(.*?)<\/span>/i);
     if (m && kpiLabels.length < totalKpis) kpiLabels.push(m[1]);
@@ -298,6 +306,12 @@ function handleResponse(data) {
     updateChecklist(data.kpi_index);
   }
   else if (data.type === 'summary') {
+    if (data.acknowledgement) {
+      addMessage(data.acknowledgement, false);
+    }
+    if (data.resolved_narrative) {
+      addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
+    }
     addMessage(data.text, false);
     document.getElementById('send-btn').disabled = true;
     document.getElementById('skip-btn').style.display = 'none';
