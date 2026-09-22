@@ -1277,6 +1277,80 @@ def sponsor_dashboard():
         all_subs=all_subs
     )
 
+@app.route("/api/sponsor-edit", methods=["POST"])
+def sponsor_edit():
+    """Sponsor overrides a single KPI value+narrative for a region."""
+    if "user" not in session or session.get("role_type") != "sponsor":
+        return jsonify({"error": "not authorised"}), 401
+    user = session["user"]
+    managed_role = user.get("managed_role") or user.get("role")
+    data = request.json or {}
+    region   = data.get("region", "").strip()
+    kpi_id   = data.get("kpi_id", "").strip()
+    value    = data.get("value", "").strip()
+    narrative = data.get("narrative", "").strip()
+    if not region or not kpi_id:
+        return jsonify({"error": "region and kpi_id required"}), 400
+
+    cycle   = get_active_cycle()
+    month_key   = cycle["month_key"]
+    month_label = cycle["month_label"]
+
+    try:
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # Find existing submission for this role+region+month
+                cur.execute(
+                    "SELECT sub_key, kpi_data FROM kpi_submissions "
+                    "WHERE role=%s AND region=%s AND month=%s LIMIT 1",
+                    (managed_role, region, month_label)
+                )
+                row = cur.fetchone()
+            if row:
+                kpi_data = row["kpi_data"]
+                if isinstance(kpi_data, str):
+                    try: kpi_data = json.loads(kpi_data)
+                    except Exception: kpi_data = {}
+                kpi_data[kpi_id] = {
+                    "value": value,
+                    "narrative": narrative,
+                    "edited_by": user["name"],
+                    "edited_at": datetime.now().isoformat()
+                }
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE kpi_submissions SET kpi_data=%s, submitted_at=NOW() WHERE sub_key=%s",
+                        (json.dumps(kpi_data), row["sub_key"])
+                    )
+            else:
+                # No submission yet — create a sponsor-initiated one
+                sub_key = "%s_%s_%s_sponsor_%s" % (managed_role, region, month_key, user["id"])
+                kpi_data = {
+                    kpi_id: {
+                        "value": value,
+                        "narrative": narrative,
+                        "edited_by": user["name"],
+                        "edited_at": datetime.now().isoformat()
+                    }
+                }
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        INSERT INTO kpi_submissions
+                            (sub_key, leader_id, leader_name, role, region, month, kpi_data, status)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 'sponsor_edit')
+                        ON CONFLICT (sub_key) DO UPDATE SET
+                            kpi_data = kpi_submissions.kpi_data || EXCLUDED.kpi_data::jsonb,
+                            submitted_at = NOW()
+                    """, (sub_key, user["id"], user["name"], managed_role, region,
+                          month_label, json.dumps(kpi_data)))
+            conn.commit()
+    except Exception as e:
+        log.error("sponsor_edit error: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+    log.info("Sponsor edit: %s / %s / %s = %s by %s", managed_role, region, kpi_id, value, user["name"])
+    return jsonify({"success": True})
+
 @app.route("/api/approve", methods=["POST"])
 def approve():
     if "user" not in session:

@@ -56,6 +56,34 @@
   .no-data { color: #aaa; font-style: italic; }
   .source-tag { font-size: 10px; color: #aaa; background: #f5f5f5; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
 
+  /* Sponsor edit */
+  .pencil-btn { background: none; border: none; cursor: pointer; color: #bbb; font-size: 13px; padding: 2px 4px; margin-left: 6px; border-radius: 4px; transition: color 0.15s, background 0.15s; vertical-align: middle; }
+  .pencil-btn:hover { color: #007DB8; background: #e8f4fd; }
+  .edit-inline { display: none; background: #f0f7ff; border: 1px solid #b8d8f5; border-radius: 8px; padding: 12px 14px; margin-top: 8px; }
+  .edit-inline.open { display: block; }
+  .edit-inline label { font-size: 11px; font-weight: 700; color: #555; display: block; margin-bottom: 3px; }
+  .edit-inline input[type=text] { width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; margin-bottom: 8px; }
+  .edit-inline textarea { width: 100%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; resize: vertical; min-height: 60px; margin-bottom: 8px; }
+  .edit-inline-btns { display: flex; gap: 8px; }
+  .save-edit-btn { background: #007DB8; color: white; border: none; padding: 6px 16px; border-radius: 5px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .save-edit-btn:hover { background: #00335B; }
+  .cancel-edit-btn { background: none; border: 1px solid #ccc; padding: 6px 14px; border-radius: 5px; font-size: 12px; cursor: pointer; color: #555; }
+  .edited-tag { font-size: 10px; color: #007DB8; background: #e0f0ff; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
+
+  /* Sub-region drill-down */
+  .sr-toggle { background: none; border: 1px solid #007DB8; color: #007DB8; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 14px; transition: all 0.2s; }
+  .sr-toggle:hover { background: #007DB8; color: white; }
+  .sr-panel { display: none; background: #f8fbff; border: 1px solid #cde; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .sr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sr-tab { padding: 5px 12px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid #ccc; background: white; color: #555; transition: all 0.2s; }
+  .sr-tab.active { background: #007DB8; color: white; border-color: #007DB8; }
+  .sr-content { font-size: 13px; }
+  .sr-loading { color: #aaa; font-style: italic; }
+  .dot-green { color: #28a745; font-size: 14px; }
+  .dot-amber { color: #fd7e14; font-size: 14px; }
+  .dot-red { color: #dc3545; font-size: 14px; }
+  .dot-grey { color: #aaa; font-size: 14px; }
+
   /* Approve section */
   .approve-box { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; }
   .approve-info h3 { font-size: 16px; color: #00335B; margin-bottom: 6px; }
@@ -125,20 +153,29 @@
     {% for region in regions %}
     <div id="region-{{ region }}" class="region-panel" {% if not loop.first %}style="display:none"{% endif %}>
       {% set sub = all_subs[region] %}
+
+      <!-- Sub-region drill-down toggle -->
+      <button class="sr-toggle" onclick="toggleSubRegions('{{ region }}', this)">▼ View Sub-region Breakdown</button>
+      <div class="sr-panel" id="sr-panel-{{ region }}">
+        <div class="sr-tabs" id="sr-tabs-{{ region }}"><span class="sr-loading">Loading sub-regions…</span></div>
+        <div class="sr-content" id="sr-content-{{ region }}"></div>
+      </div>
+
       {% if sub.data %}
       <table class="kpi-table">
         <thead>
           <tr>
             <th style="width:28%">KPI</th>
             <th style="width:12%">Target</th>
-            <th style="width:12%">Current</th>
+            <th style="width:14%">Current</th>
             <th>Narrative</th>
           </tr>
         </thead>
         <tbody>
           {% for kpi in kpis %}
           {% set kpi_data = sub.data.kpis.get(kpi.id) if sub.data.kpis else none %}
-          <tr>
+          {% set edited = kpi_data and kpi_data.get('edited_by') %}
+          <tr id="kpi-row-{{ region }}-{{ kpi.id }}">
             <td>
               <div class="kpi-name-cell">{{ kpi.label }}</div>
               <div class="kpi-cat">{{ kpi.category }}</div>
@@ -146,14 +183,29 @@
             <td class="kpi-target">{{ kpi.target }}</td>
             <td>
               {% if kpi_data %}
-              <span class="kpi-value">{{ kpi_data.value }}</span>
+              <span class="kpi-value" id="kpi-val-{{ region }}-{{ kpi.id }}">{{ kpi_data.value }}</span>
               {% if sub.source == 'sample' %}<span class="source-tag">Aug</span>{% endif %}
+              {% if edited %}<span class="edited-tag">edited</span>{% endif %}
               {% else %}
-              <span class="no-data">—</span>
+              <span class="no-data" id="kpi-val-{{ region }}-{{ kpi.id }}">—</span>
               {% endif %}
+              <button class="pencil-btn" title="Edit this KPI"
+                onclick="toggleEdit('{{ region }}','{{ kpi.id }}','{{ (kpi_data.value if kpi_data else '') | replace("'","\\'")|replace('"',"&quot;") }}','{{ (kpi_data.narrative if kpi_data else '') | replace("'","\\'")|replace('"',"&quot;") | replace("\n"," ") }}')">✏️</button>
             </td>
-            <td class="kpi-narrative">
-              {% if kpi_data %}{{ kpi_data.narrative }}{% else %}<span class="no-data">Not submitted yet</span>{% endif %}
+            <td>
+              <span class="kpi-narrative" id="kpi-nar-{{ region }}-{{ kpi.id }}">
+                {% if kpi_data %}{{ kpi_data.narrative }}{% else %}<span class="no-data">Not submitted yet</span>{% endif %}
+              </span>
+              <div class="edit-inline" id="edit-inline-{{ region }}-{{ kpi.id }}">
+                <label>Value</label>
+                <input type="text" id="edit-val-{{ region }}-{{ kpi.id }}" placeholder="e.g. 85%">
+                <label>Narrative</label>
+                <textarea id="edit-nar-{{ region }}-{{ kpi.id }}" placeholder="Update the narrative…"></textarea>
+                <div class="edit-inline-btns">
+                  <button class="save-edit-btn" onclick="saveEdit('{{ region }}','{{ kpi.id }}')">Save</button>
+                  <button class="cancel-edit-btn" onclick="cancelEdit('{{ region }}','{{ kpi.id }}')">Cancel</button>
+                </div>
+              </div>
             </td>
           </tr>
           {% endfor %}
@@ -192,11 +244,98 @@
 </div>
 
 <script>
+const managedRole = '{{ managed_role }}';
+const srCache = {};
+
 function showRegion(region, btn) {
   document.querySelectorAll('.region-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('region-' + region).style.display = 'block';
   btn.classList.add('active');
+}
+
+async function toggleSubRegions(region, btn) {
+  const panel = document.getElementById('sr-panel-' + region);
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+    btn.textContent = '▼ View Sub-region Breakdown';
+    return;
+  }
+  panel.style.display = 'block';
+  btn.textContent = '▲ Hide Sub-region Breakdown';
+  if (srCache[region]) { renderSubRegions(region, srCache[region]); return; }
+  try {
+    const res = await fetch('/api/sub-submissions/' + managedRole + '/' + region);
+    const data = await res.json();
+    srCache[region] = data;
+    renderSubRegions(region, data);
+  } catch(e) {
+    document.getElementById('sr-tabs-' + region).innerHTML = '<span style="color:red">Failed to load: ' + e.message + '</span>';
+  }
+}
+
+function renderSubRegions(region, data) {
+  const tabsEl = document.getElementById('sr-tabs-' + region);
+  const contentEl = document.getElementById('sr-content-' + region);
+  const subRegions = data.sub_regions || [];
+  const subData = data.sub_data || {};
+  const kpis = data.kpis || [];
+
+  if (!subRegions.length) {
+    tabsEl.innerHTML = '<span style="color:#aaa;font-style:italic;">No sub-regions defined for this region.</span>';
+    contentEl.innerHTML = '';
+    return;
+  }
+
+  tabsEl.innerHTML = subRegions.map((sr, i) => {
+    const hasData = subData[sr] && Object.keys(subData[sr]).length > 0;
+    const badge = hasData ? ' ✓' : '';
+    return '<button class="sr-tab' + (i===0?' active':'') + '" onclick="showSrTab(\'' + region + '\',\'' + sr + '\',this)">' + sr + badge + '</button>';
+  }).join('');
+
+  showSrTabContent(region, subRegions[0], subData, kpis, contentEl);
+}
+
+function showSrTab(region, sr, btn) {
+  document.querySelectorAll('#sr-tabs-' + region + ' .sr-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const data = srCache[region] || {};
+  showSrTabContent(region, sr, data.sub_data || {}, data.kpis || [],
+    document.getElementById('sr-content-' + region));
+}
+
+function dotHtml(value, narrative) {
+  if (!value || value === '—' || value === '-') return '<span class="dot-grey">⬤</span>';
+  const m = (value + '').match(/(\d+\.?\d*)\s*%/);
+  if (m) {
+    const pct = parseFloat(m[1]);
+    if (pct >= 90) return '<span class="dot-green">⬤</span>';
+    if (pct >= 70) return '<span class="dot-amber">⬤</span>';
+    return '<span class="dot-red">⬤</span>';
+  }
+  const nar = (narrative || '').toLowerCase();
+  if (/on track|exceeded|above|ahead|strong|100%|complete/.test(nar)) return '<span class="dot-green">⬤</span>';
+  if (/below|behind|risk|challenge|not yet|0%|struggling/.test(nar)) return '<span class="dot-red">⬤</span>';
+  return '<span class="dot-amber">⬤</span>';
+}
+
+function showSrTabContent(region, sr, subData, kpis, el) {
+  const srData = subData[sr];
+  if (!srData || !Object.keys(srData).length) {
+    el.innerHTML = '<p style="color:#aaa;font-style:italic;padding:10px 0;">No data submitted for ' + sr + ' yet.</p>';
+    return;
+  }
+  let html = '<table class="kpi-table"><thead><tr><th>KPI</th><th>Status</th><th>Narrative</th></tr></thead><tbody>';
+  kpis.forEach(k => {
+    const entry = srData[k.id] || srData[String(k.id)] || {};
+    const val = entry.value || '';
+    const nar = entry.narrative || '';
+    html += '<tr><td><div class="kpi-name-cell">' + k.label + '</div><div class="kpi-cat">' + k.category + '</div></td>';
+    html += '<td>' + dotHtml(val, nar) + ' <span style="font-size:12px;color:#555;">' + (val||'—') + '</span></td>';
+    html += '<td class="kpi-narrative">' + (nar || '<span class="no-data">—</span>') + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
 async function downloadPpt() {
@@ -208,33 +347,76 @@ async function downloadPpt() {
     if (!res.ok) {
       const err = await res.json();
       alert('PPT error: ' + (err.error || res.status));
-      btn.disabled = false;
-      btn.textContent = '⬇ Download PPT';
-      return;
+      btn.disabled = false; btn.textContent = '⬇ Download PPT'; return;
     }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'KPI_RoleUpdate_{{ managed_role }}_Sep2026.pptx';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(e) {
-    alert('Failed to generate PPT: ' + e.message);
+    a.href = url; a.download = 'KPI_RoleUpdate_{{ managed_role }}_Sep2026.pptx';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  } catch(e) { alert('Failed: ' + e.message); }
+  btn.disabled = false; btn.textContent = '⬇ Download PPT';
+}
+
+// ── Sponsor inline edit ────────────────────────────────────────────────────
+function toggleEdit(region, kpiId, currentVal, currentNar) {
+  // Close any other open edit forms first
+  document.querySelectorAll('.edit-inline.open').forEach(function(el) {
+    if (el.id !== 'edit-inline-' + region + '-' + kpiId) el.classList.remove('open');
+  });
+  const drawer = document.getElementById('edit-inline-' + region + '-' + kpiId);
+  if (drawer.classList.contains('open')) {
+    drawer.classList.remove('open');
+    return;
   }
-  btn.disabled = false;
-  btn.textContent = '⬇ Download PPT';
+  // Pre-fill with current values
+  document.getElementById('edit-val-' + region + '-' + kpiId).value = currentVal || '';
+  document.getElementById('edit-nar-' + region + '-' + kpiId).value = currentNar || '';
+  drawer.classList.add('open');
+  document.getElementById('edit-val-' + region + '-' + kpiId).focus();
+}
+
+function cancelEdit(region, kpiId) {
+  document.getElementById('edit-inline-' + region + '-' + kpiId).classList.remove('open');
+}
+
+async function saveEdit(region, kpiId) {
+  const val = document.getElementById('edit-val-' + region + '-' + kpiId).value.trim();
+  const nar = document.getElementById('edit-nar-' + region + '-' + kpiId).value.trim();
+  if (!val && !nar) { alert('Please enter a value or narrative.'); return; }
+  const btn = document.querySelector('#edit-inline-' + region + '-' + kpiId + ' .save-edit-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/sponsor-edit', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({region: region, kpi_id: kpiId, value: val, narrative: nar})
+    });
+    const d = await res.json();
+    if (!d.success) { alert('Error: ' + (d.error || 'unknown')); btn.disabled = false; btn.textContent = 'Save'; return; }
+    // Update display inline without page reload
+    const valEl = document.getElementById('kpi-val-' + region + '-' + kpiId);
+    if (valEl) { valEl.textContent = val || '—'; valEl.className = val ? 'kpi-value' : 'no-data'; }
+    const narEl = document.getElementById('kpi-nar-' + region + '-' + kpiId);
+    if (narEl) narEl.innerHTML = nar || '<span class="no-data">—</span>';
+    // Add edited tag if not present
+    if (!document.getElementById('edited-tag-' + region + '-' + kpiId)) {
+      const tag = document.createElement('span');
+      tag.className = 'edited-tag'; tag.id = 'edited-tag-' + region + '-' + kpiId;
+      tag.textContent = 'edited';
+      valEl && valEl.parentNode.insertBefore(tag, valEl.nextSibling);
+    }
+    cancelEdit(region, kpiId);
+  } catch(e) { alert('Failed: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Save';
 }
 
 async function approveAll() {
   const btn = document.getElementById('approve-btn');
-  btn.disabled = true;
-  btn.textContent = 'Approving…';
+  btn.disabled = true; btn.textContent = 'Approving…';
   const res = await fetch('/api/approve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: '{{ managed_role }}' })
   });
   const data = await res.json();
@@ -242,13 +424,7 @@ async function approveAll() {
     btn.textContent = '✓ Approved';
     const banner = document.getElementById('success-banner');
     banner.style.display = 'block';
-    banner.innerHTML = (
-      '<strong>&#10003; All submissions approved!</strong><br>' +
-      'The {{ role_name }} status report for September 2026 has been approved. ' +
-      'PowerPoint reports (regional + global consolidated) have been generated and ' +
-      'will be delivered to Jan Manos &amp; Thomas Pfister. ' +
-      '<br><br><em>In the full BTP version, the PPT would be auto-attached and emailed automatically.</em>'
-    );
+    banner.innerHTML = '<strong>&#10003; All submissions approved!</strong><br>The {{ role_name }} status report for September 2026 has been approved.';
   }
 }
 </script>
