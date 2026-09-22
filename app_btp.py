@@ -135,6 +135,14 @@ def init_db():
         submitted_at TIMESTAMP DEFAULT NOW(),
         PRIMARY KEY (sub_key, sub_region)
     );
+
+    CREATE TABLE IF NOT EXISTS kpi_active_cycle (
+        id           SERIAL PRIMARY KEY,
+        month_key    TEXT NOT NULL UNIQUE,
+        month_label  TEXT NOT NULL,
+        opened_at    TIMESTAMP DEFAULT NOW(),
+        closed_at    TIMESTAMP
+    );
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
@@ -142,6 +150,7 @@ def init_db():
         conn.commit()
     log.info("DB schema initialised")
     _seed_data()
+    _seed_active_cycle()
 
 def _seed_data():
     """Seed reference data if tables are empty."""
@@ -274,6 +283,118 @@ def _seed_data():
         conn.commit()
     log.info("Reference data seeded")
 
+def _seed_active_cycle():
+    """Ensure there is always one open cycle. Seeds September 2026 on first run."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM kpi_active_cycle")
+            if cur.fetchone()[0] == 0:
+                cur.execute(
+                    "INSERT INTO kpi_active_cycle (month_key, month_label) VALUES (%s, %s)",
+                    ("2026_09", "September 2026")
+                )
+        conn.commit()
+    log.info("Active cycle seeded")
+
+# ── Cycle helpers ─────────────────────────────────────────────────────────────
+
+def get_active_cycle():
+    """Return the current open cycle dict: {month_key, month_label}.
+    Falls back to September 2026 if table missing (pre-migration instances)."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT month_key, month_label FROM kpi_active_cycle "
+                    "WHERE closed_at IS NULL ORDER BY opened_at DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+        if row:
+            return {"month_key": row["month_key"], "month_label": row["month_label"]}
+    except Exception as e:
+        log.warning("get_active_cycle fallback: %s", e)
+    return {"month_key": "2026_09", "month_label": "September 2026"}
+
+def get_prior_cycle(current_month_key):
+    """Return the most-recently closed cycle before current, or None."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT month_key, month_label FROM kpi_active_cycle "
+                    "WHERE closed_at IS NOT NULL AND month_key < %s "
+                    "ORDER BY month_key DESC LIMIT 1",
+                    (current_month_key,)
+                )
+                row = cur.fetchone()
+        if row:
+            return {"month_key": row["month_key"], "month_label": row["month_label"]}
+    except Exception as e:
+        log.warning("get_prior_cycle error: %s", e)
+    return None
+
+def db_close_cycle_and_open_next(new_month_key, new_month_label):
+    """Close the current open cycle, promote its submissions → kpi_history,
+    then open the new cycle."""
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Get current open cycle
+            cur.execute(
+                "SELECT id, month_key FROM kpi_active_cycle WHERE closed_at IS NULL LIMIT 1"
+            )
+            current = cur.fetchone()
+            if not current:
+                raise ValueError("No open cycle found")
+            old_key = current["month_key"]
+
+            # Promote kpi_submissions for closing month → kpi_history
+            cur.execute(
+                "SELECT role, region, kpi_data FROM kpi_submissions WHERE month=%s",
+                (old_key,)
+            )
+            subs = cur.fetchall()
+
+        with conn.cursor() as cur:
+            for s in subs:
+                hist_key = "%s_%s_%s" % (s["role"], s["region"], old_key)
+                kd = s["kpi_data"]
+                if isinstance(kd, str):
+                    try: kd = json.loads(kd)
+                    except Exception: kd = {}
+                cur.execute("""
+                    INSERT INTO kpi_history (hist_key, role, region, month, kpi_data)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (hist_key) DO UPDATE SET kpi_data = EXCLUDED.kpi_data
+                """, (hist_key, s["role"], s["region"], old_key, json.dumps(kd)))
+
+            # Close the current cycle
+            cur.execute(
+                "UPDATE kpi_active_cycle SET closed_at = NOW() WHERE month_key = %s",
+                (old_key,)
+            )
+            # Open the new cycle
+            cur.execute(
+                "INSERT INTO kpi_active_cycle (month_key, month_label) VALUES (%s, %s) "
+                "ON CONFLICT (month_key) DO UPDATE SET closed_at = NULL, opened_at = NOW()",
+                (new_month_key, new_month_label)
+            )
+        conn.commit()
+    log.info("Cycle closed: %s → promoted %d submissions to history. New cycle: %s",
+             old_key, len(subs), new_month_key)
+
+def get_all_cycles():
+    """Return all cycles ordered newest first."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT month_key, month_label, opened_at, closed_at "
+                    "FROM kpi_active_cycle ORDER BY month_key DESC"
+                )
+                return [dict(r) for r in cur.fetchall()]
+    except Exception:
+        return []
+
 # ── AI Core helper ────────────────────────────────────────────────────────────
 
 _aicore_token = None
@@ -370,8 +491,13 @@ def db_get_regions():
             cur.execute("SELECT region FROM kpi_regions ORDER BY region")
             return [r["region"] for r in cur.fetchall()]
 
-def db_get_history(role, region, month="2026_08"):
-    key = f"{role}_{region}_{month}"
+def db_get_history(role, region, month=None):
+    if not month:
+        # Default to the prior cycle relative to the active one
+        cycle = get_active_cycle()
+        prior = get_prior_cycle(cycle["month_key"])
+        month = prior["month_key"] if prior else "2026_08"
+    key = "%s_%s_%s" % (role, region, month)
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT kpi_data FROM kpi_history WHERE hist_key=%s", (key,))
@@ -388,7 +514,10 @@ def db_get_sub_regions(region):
             return [r["sub_region"] for r in cur.fetchall()]
 
 def db_save_sub_submission(leader, role, region, sub_region, kpi_responses):
-    sub_key = f"{role}_{region}_2026_09_{leader['id']}"
+    cycle = get_active_cycle()
+    month_key   = cycle["month_key"]
+    month_label = cycle["month_label"]
+    sub_key = "%s_%s_%s_%s" % (role, region, month_key, leader["id"])
     log.info("Saving sub-submission: key=%s sub_region=%s kpis=%d", sub_key, sub_region, len(kpi_responses))
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -416,23 +545,29 @@ def db_save_sub_submission(leader, role, region, sub_region, kpi_responses):
                     kpi_data = EXCLUDED.kpi_data,
                     submitted_at = NOW()
             """, (sub_key, region, sub_region, role, leader["id"], leader["name"],
-                  "September 2026", json.dumps(merged)))
+                  month_label, json.dumps(merged)))
         conn.commit()
     log.info("Sub-submission saved OK: %s / %s (total kpis=%d)", sub_key, sub_region, len(merged))
 
-def db_get_sub_submissions(role, region):
-    """Return dict keyed by sub_region → kpi_data."""
+def db_get_sub_submissions(role, region, month_key=None):
+    """Return dict keyed by sub_region → kpi_data for the given (or active) month."""
+    if not month_key:
+        month_key = get_active_cycle()["month_key"]
+    # sub_key encodes month: role_region_monthkey_leaderid — match by prefix
+    prefix = "%s_%s_%s_%%" % (role, region, month_key)
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT sub_region, kpi_data, submitted_at
                 FROM kpi_sub_submissions
-                WHERE role=%s AND region=%s
+                WHERE sub_key LIKE %s
                 ORDER BY submitted_at DESC
-            """, (role, region))
+            """, (prefix,))
             rows = cur.fetchall()
     result = {}
     for r in rows:
+        if r["sub_region"] in result:
+            continue  # keep most-recent (DESC order)
         kd = r["kpi_data"]
         if isinstance(kd, str):
             try: kd = json.loads(kd)
@@ -441,7 +576,10 @@ def db_get_sub_submissions(role, region):
     return result
 
 def db_save_submission(leader, role, region, kpi_responses):
-    sub_key = f"{role}_{region}_2026_09_{leader['id']}"
+    cycle   = get_active_cycle()
+    month_key   = cycle["month_key"]
+    month_label = cycle["month_label"]
+    sub_key = "%s_%s_%s_%s" % (role, region, month_key, leader["id"])
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -451,7 +589,7 @@ def db_save_submission(leader, role, region, kpi_responses):
                     kpi_data = EXCLUDED.kpi_data,
                     submitted_at = NOW(),
                     status = 'pending_approval'
-            """, (sub_key, leader["id"], leader["name"], role, region, "September 2026",
+            """, (sub_key, leader["id"], leader["name"], role, region, month_label,
                   json.dumps(kpi_responses)))
         conn.commit()
 
@@ -510,6 +648,9 @@ def agent_start():
     if "user" not in session:
         return redirect(url_for("login"))
     user = session["user"]
+    cycle = get_active_cycle()
+    prior_cycle = get_prior_cycle(cycle["month_key"])
+    prior_month_label = prior_cycle["month_label"] if prior_cycle else "Prior Month"
     try:
         kpis = db_get_kpis(user["role"])
         prior = db_get_history(user["role"], user["region"])
@@ -521,7 +662,7 @@ def agent_start():
     session["kpi_index"] = 0
     session["sub_regions"] = sub_regions
     session["sub_region_index"] = 0
-    session["responses"] = {}        # sub_region -> {kpi_id -> {value, narrative}}
+    session["responses"] = {}
     session["prior"] = dict(prior) if prior else {}
     role_labels = {"EA": "Enterprise Architect", "DA": "Digital Advisor", "CEP": "Customer Engagement Partner"}
     return render_template("agent.html",
@@ -531,7 +672,8 @@ def agent_start():
         total_kpis=len(kpis),
         total_sub_regions=len(sub_regions),
         sub_regions=sub_regions,
-        prior_month="August 2026"
+        current_month=cycle["month_label"],
+        prior_month=prior_month_label
     )
 
 @app.route("/api/chat", methods=["POST"])
@@ -554,11 +696,12 @@ def chat():
     # ── Greeting ──────────────────────────────────────────────────────────────
     if sri == 0 and idx == 0 and not user_msg:
         sr_list = ", ".join(sub_regions) if sub_regions else user["region"]
+        current_month_label = get_active_cycle()["month_label"]
         if sub_regions:
             return jsonify({
                 "type": "greeting",
                 "text": (f"Hi {user['name'].split()[0]}! Time for your <strong>{role_name} "
-                         f"status update</strong> for <strong>{user['region']}</strong> — September 2026.<br><br>"
+                         f"status update</strong> for <strong>{user['region']}</strong> — {current_month_label}.<br><br>"
                          f"I'll collect <strong>{len(kpis)} KPIs</strong> for each of your "
                          f"<strong>{len(sub_regions)} sub-regions</strong>.<br><br>"
                          f"Choose a sub-region to start, or click <em>Begin in order</em> to go through them sequentially:"),
@@ -568,7 +711,7 @@ def chat():
         return jsonify({
             "type": "greeting",
             "text": (f"Hi {user['name'].split()[0]}! Time for your <strong>{role_name} "
-                     f"status update</strong> for <strong>{user['region']}</strong> — September 2026.<br><br>"
+                     f"status update</strong> for <strong>{user['region']}</strong> — {current_month_label}.<br><br>"
                      f"I'll collect <strong>{len(kpis)} KPIs</strong> for this region.<br><br>"
                      f"Ready to begin?"),
             "show_start": True
@@ -1402,6 +1545,54 @@ def admin_save_prior():
         conn.commit()
     return jsonify({"success": True})
 
+# ── Admin API: Cycle management ───────────────────────────────────────────────
+
+@app.route("/admin/api/cycles", methods=["GET"])
+def admin_get_cycles():
+    _require_admin()
+    return jsonify({"cycles": get_all_cycles(), "active": get_active_cycle()})
+
+@app.route("/admin/api/cycles/close", methods=["POST"])
+def admin_close_cycle():
+    _require_admin()
+    data = request.json or {}
+    new_month_key   = data.get("new_month_key", "").strip()
+    new_month_label = data.get("new_month_label", "").strip()
+    if not new_month_key or not new_month_label:
+        return jsonify({"error": "new_month_key and new_month_label required"}), 400
+    try:
+        db_close_cycle_and_open_next(new_month_key, new_month_label)
+    except Exception as e:
+        log.error("close_cycle error: %s", e)
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"success": True, "message": "Cycle closed. New cycle: " + new_month_label})
+
+@app.route("/admin/api/cycles/open", methods=["POST"])
+def admin_open_cycle():
+    """Directly set/reopen a cycle without closing the current one (for corrections)."""
+    _require_admin()
+    data = request.json or {}
+    month_key   = data.get("month_key", "").strip()
+    month_label = data.get("month_label", "").strip()
+    if not month_key or not month_label:
+        return jsonify({"error": "month_key and month_label required"}), 400
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                # Close all open cycles
+                cur.execute("UPDATE kpi_active_cycle SET closed_at = NOW() WHERE closed_at IS NULL")
+                # Open the requested one
+                cur.execute(
+                    "INSERT INTO kpi_active_cycle (month_key, month_label) VALUES (%s, %s) "
+                    "ON CONFLICT (month_key) DO UPDATE SET closed_at = NULL, opened_at = NOW()",
+                    (month_key, month_label)
+                )
+            conn.commit()
+    except Exception as e:
+        log.error("open_cycle error: %s", e)
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"success": True, "active": get_active_cycle()})
+
 # ── Admin API: Submissions ────────────────────────────────────────────────────
 
 @app.route("/admin/api/submissions", methods=["GET"])
@@ -1479,7 +1670,7 @@ def generate_ppt():
                         hist = {}
                 submissions[region] = {"kpi_data": hist, "status": "sample"}
 
-    month_label = "September 2026"
+    month_label = get_active_cycle()["month_label"]
     tmp = tempfile.NamedTemporaryFile(
         suffix=".pptx",
         delete=False,

@@ -122,7 +122,9 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="switchTab('users', this)">👥 Users</button>
     <button class="admin-tab" onclick="switchTab('kpis', this)">📊 KPIs</button>
+    <button class="admin-tab" onclick="switchTab('subregions', this)">🗺 Sub-regions</button>
     <button class="admin-tab" onclick="switchTab('prior', this)">📅 Prior Month Data</button>
+    <button class="admin-tab" onclick="switchTab('cycle', this)">🔄 Cycle Management</button>
     <button class="admin-tab" onclick="switchTab('submissions', this)">📋 Submissions</button>
   </div>
 
@@ -221,6 +223,34 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100
   </div>
 
   <!-- ── PRIOR MONTH DATA TAB ── -->
+  <div id="panel-subregions" class="admin-panel">
+    <div class="admin-card">
+      <h3>Sub-regions by Region
+        <button class="add-btn" onclick="showAddSrForm()">+ Add Sub-region</button>
+      </h3>
+      <div id="add-sr-form" style="display:none; background:#f8f9fa; border-radius:8px; padding:14px; margin-bottom:14px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:4px;">REGION</label>
+            <select id="sr-region" style="padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px;">
+              <option value="APAC">APAC</option>
+              <option value="EMEA">EMEA</option>
+              <option value="MEE">MEE</option>
+              <option value="AMER">AMER</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:4px;">SUB-REGION NAME</label>
+            <input id="sr-name" type="text" placeholder="e.g. Japan" style="padding:8px 10px; border:1px solid #ddd; border-radius:6px; font-size:13px; width:200px;">
+          </div>
+          <button class="save-btn" onclick="addSubRegion()">Add</button>
+          <button style="background:#eee;border:none;border-radius:6px;padding:9px 14px;cursor:pointer;font-size:13px;" onclick="document.getElementById('add-sr-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="sr-list">Loading…</div>
+    </div>
+  </div>
+
   <div id="panel-prior" class="admin-panel">
     <div class="admin-card">
       <h3>Enter / Edit Prior Month Data</h3>
@@ -260,6 +290,51 @@ body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100
     </div>
   </div>
 
+  <!-- ── CYCLE MANAGEMENT TAB ── -->
+  <div id="panel-cycle" class="admin-panel">
+    <div class="admin-card">
+      <h3>Active Cycle <button class="add-btn" style="margin-bottom:0;" onclick="loadCycles()">↻ Refresh</button></h3>
+      <div id="cycle-active-display" style="margin-bottom:20px;padding:12px;background:#e8f4fd;border-radius:8px;font-size:14px;">
+        Loading…
+      </div>
+
+      <h4 style="margin:0 0 10px;color:#00335B;">Close Current Month &amp; Open Next</h4>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">This will promote all submitted KPI data for the current month into historical records, then open the new month for entry.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:500px;">
+        <div class="form-group">
+          <label>New Month Key</label>
+          <input type="text" id="new-month-key" placeholder="e.g. 2026_10">
+        </div>
+        <div class="form-group">
+          <label>New Month Label</label>
+          <input type="text" id="new-month-label" placeholder="e.g. October 2026">
+        </div>
+      </div>
+      <button class="add-btn" style="background:#dc3545;margin-top:12px;" onclick="closeCycle()">Close Month &amp; Open Next →</button>
+
+      <hr style="margin:24px 0;border-color:#eee;">
+
+      <h4 style="margin:0 0 10px;color:#00335B;">Jump to Any Month (No Promotion)</h4>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">For corrections or re-opening a prior month. Does not promote data — just switches the active cycle.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:500px;">
+        <div class="form-group">
+          <label>Month Key</label>
+          <input type="text" id="jump-month-key" placeholder="e.g. 2026_09">
+        </div>
+        <div class="form-group">
+          <label>Month Label</label>
+          <input type="text" id="jump-month-label" placeholder="e.g. September 2026">
+        </div>
+      </div>
+      <button class="add-btn" onclick="jumpCycle()">Switch Active Cycle →</button>
+
+      <hr style="margin:24px 0;border-color:#eee;">
+
+      <h4 style="margin:0 0 10px;color:#00335B;">Cycle History</h4>
+      <div id="cycle-history-table">Loading…</div>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -273,8 +348,60 @@ function switchTab(tab, btn) {
   document.getElementById('panel-' + tab).classList.add('active');
   if (tab === 'users')       loadUsers();
   if (tab === 'kpis')        loadKpis();
+  if (tab === 'subregions')  loadSubRegions();
   if (tab === 'prior')       loadPriorForm();
+  if (tab === 'cycle')       loadCycles();
   if (tab === 'submissions') loadSubmissions();
+}
+
+async function loadSubRegions() {
+  const res = await fetch('/admin/api/sub-regions');
+  const data = await res.json();
+  const grouped = data.sub_regions || {};
+  const regionOrder = ['APAC', 'EMEA', 'MEE', 'AMER'];
+  let html = '';
+  regionOrder.forEach(region => {
+    const rows = grouped[region] || [];
+    html += '<div style="margin-bottom:18px;">';
+    html += '<div style="font-size:12px;font-weight:700;color:#007DB8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">' + region + ' <span style="font-weight:400;color:#aaa;">(' + rows.length + ' sub-regions)</span></div>';
+    if (rows.length) {
+      html += '<table class="admin-tbl"><thead><tr><th>Sub-region</th><th>Order</th><th></th></tr></thead><tbody>';
+      rows.forEach(r => {
+        html += '<tr><td>' + esc(r.sub_region) + '</td><td>' + r.sort_order + '</td>';
+        html += '<td><button class="del-btn" onclick="deleteSubRegion(' + r.id + ')">Delete</button></td></tr>';
+      });
+      html += '</tbody></table>';
+    } else {
+      html += '<p style="color:#aaa;font-style:italic;font-size:12px;">No sub-regions defined.</p>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('sr-list').innerHTML = html;
+}
+
+function showAddSrForm() {
+  document.getElementById('add-sr-form').style.display = 'block';
+  document.getElementById('sr-name').focus();
+}
+
+async function addSubRegion() {
+  const region = document.getElementById('sr-region').value;
+  const sub_region = document.getElementById('sr-name').value.trim();
+  if (!sub_region) { alert('Enter a sub-region name'); return; }
+  await fetch('/admin/api/sub-regions', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ region, sub_region })
+  });
+  document.getElementById('sr-name').value = '';
+  document.getElementById('add-sr-form').style.display = 'none';
+  loadSubRegions();
+}
+
+async function deleteSubRegion(id) {
+  if (!confirm('Delete this sub-region?')) return;
+  await fetch('/admin/api/sub-regions/' + id, { method: 'DELETE' });
+  loadSubRegions();
 }
 
 function toggleForm(id) {
@@ -555,6 +682,75 @@ function renderSubmissions(subs, kpisByRole) {
   });
   html += '</tbody></table>';
   el.innerHTML = html;
+}
+
+// ── Cycle Management ──────────────────────────────────────────────────────────
+async function loadCycles() {
+  const res = await fetch('/admin/api/cycles');
+  const d = await res.json();
+  const active = d.active || {};
+  document.getElementById('cycle-active-display').innerHTML =
+    '<strong style="font-size:16px;color:#00335B;">' + (active.month_label || '—') + '</strong>'
+    + ' &nbsp;<span style="font-size:11px;color:#888;">Key: ' + (active.month_key || '—') + '</span>'
+    + '<span style="margin-left:12px;background:#28a745;color:white;font-size:11px;padding:2px 8px;border-radius:10px;">ACTIVE</span>';
+  const cycles = d.cycles || [];
+  if (!cycles.length) {
+    document.getElementById('cycle-history-table').innerHTML = '<p style="color:#aaa;font-style:italic;">No cycles yet.</p>';
+    return;
+  }
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    + '<thead><tr style="background:#f5f7f9;">'
+    + '<th style="padding:8px;text-align:left;">Month</th>'
+    + '<th style="padding:8px;text-align:left;">Key</th>'
+    + '<th style="padding:8px;text-align:left;">Opened</th>'
+    + '<th style="padding:8px;text-align:left;">Closed</th>'
+    + '<th style="padding:8px;text-align:left;">Status</th>'
+    + '</tr></thead><tbody>';
+  cycles.forEach(function(c) {
+    const isActive = !c.closed_at;
+    html += '<tr style="border-top:1px solid #eee;">'
+      + '<td style="padding:8px;font-weight:600;">' + c.month_label + '</td>'
+      + '<td style="padding:8px;color:#888;">' + c.month_key + '</td>'
+      + '<td style="padding:8px;color:#888;">' + (c.opened_at ? c.opened_at.substring(0,10) : '—') + '</td>'
+      + '<td style="padding:8px;color:#888;">' + (c.closed_at ? c.closed_at.substring(0,10) : '—') + '</td>'
+      + '<td style="padding:8px;">'
+      + (isActive
+        ? '<span style="background:#28a745;color:white;font-size:11px;padding:2px 8px;border-radius:10px;">Active</span>'
+        : '<span style="background:#6c757d;color:white;font-size:11px;padding:2px 8px;border-radius:10px;">Closed</span>')
+      + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('cycle-history-table').innerHTML = html;
+}
+
+async function closeCycle() {
+  const key   = document.getElementById('new-month-key').value.trim();
+  const label = document.getElementById('new-month-label').value.trim();
+  if (!key || !label) { showToast('Enter both new month key and label.'); return; }
+  if (!confirm('Close current month and promote all submissions to history?\n\nNew cycle: ' + label)) return;
+  const res = await fetch('/admin/api/cycles/close', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({new_month_key: key, new_month_label: label})
+  });
+  const d = await res.json();
+  if (d.success) { showToast(d.message); loadCycles(); }
+  else showToast('Error: ' + (d.error || 'unknown'));
+}
+
+async function jumpCycle() {
+  const key   = document.getElementById('jump-month-key').value.trim();
+  const label = document.getElementById('jump-month-label').value.trim();
+  if (!key || !label) { showToast('Enter both month key and label.'); return; }
+  if (!confirm('Switch active cycle to ' + label + '?\nThis does NOT promote any data.')) return;
+  const res = await fetch('/admin/api/cycles/open', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({month_key: key, month_label: label})
+  });
+  const d = await res.json();
+  if (d.success) { showToast('Active cycle: ' + d.active.month_label); loadCycles(); }
+  else showToast('Error: ' + (d.error || 'unknown'));
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
