@@ -391,6 +391,22 @@ def db_save_sub_submission(leader, role, region, sub_region, kpi_responses):
     sub_key = f"{role}_{region}_2026_09_{leader['id']}"
     log.info("Saving sub-submission: key=%s sub_region=%s kpis=%d", sub_key, sub_region, len(kpi_responses))
     with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # Merge with existing data so a single-KPI edit never wipes the rest
+            cur.execute(
+                "SELECT kpi_data FROM kpi_sub_submissions WHERE sub_key=%s AND sub_region=%s",
+                (sub_key, sub_region)
+            )
+            existing = cur.fetchone()
+            merged = {}
+            if existing:
+                raw = existing["kpi_data"]
+                if isinstance(raw, str):
+                    try: raw = json.loads(raw)
+                    except Exception: raw = {}
+                if isinstance(raw, dict):
+                    merged = raw
+            merged.update(kpi_responses)
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO kpi_sub_submissions
@@ -400,9 +416,9 @@ def db_save_sub_submission(leader, role, region, sub_region, kpi_responses):
                     kpi_data = EXCLUDED.kpi_data,
                     submitted_at = NOW()
             """, (sub_key, region, sub_region, role, leader["id"], leader["name"],
-                  "September 2026", json.dumps(kpi_responses)))
+                  "September 2026", json.dumps(merged)))
         conn.commit()
-    log.info("Sub-submission saved OK: %s / %s", sub_key, sub_region)
+    log.info("Sub-submission saved OK: %s / %s (total kpis=%d)", sub_key, sub_region, len(merged))
 
 def db_get_sub_submissions(role, region):
     """Return dict keyed by sub_region → kpi_data."""
