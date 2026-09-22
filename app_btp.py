@@ -970,27 +970,39 @@ def _ai_interpret_kpi_response(kpi_label, kpi_target, user_msg, prior_narrative,
         )
 
     system_prompt = (
-        "You are a KPI narrative assistant for a regional sales leader. "
-        "Given a KPI name, its target, the prior month narrative, and what the user just typed, "
+        "You are a KPI narrative writer for a regional sales leader submitting a monthly business review. "
+        "Your job is to turn what the user typed into a high-quality, senior-leader-ready narrative sentence or two.\n\n"
+        "Given: KPI name, target, prior month narrative, explicit value entered, and what the user typed — "
         "return a JSON object with exactly two keys:\n"
-        "  \"narrative\": the final sentence/text to record for this KPI this month.\n"
-        "  \"ack\": one short, friendly confirmation sentence (≤12 words) to show the user.\n\n"
-        "Rules — follow strictly:\n"
-        "1. SAME-AS-LAST: If the user says 'same', 'same as last month', 'no change', 'unchanged', "
-        "   'copy', 'reuse', 'keep' — return the exact prior month narrative as the narrative.\n"
-        "2. DELTA-UPDATE: If the user gives only a number/% change (e.g. 'change it to 83%', "
-        "   '83%', 'update to 78', 'now 91%', 'it's 77 now') — take the prior month narrative "
-        "   and replace ONLY the percentage/number figure in it with the new value the user gave. "
-        "   Keep all other wording of the sentence identical. If there's no prior narrative, "
-        "   build a natural sentence using the KPI name, target and the number given.\n"
-        "3. FULL SENTENCE: If the user provides a complete sentence or detailed update, use it verbatim.\n"
-        "4. SHORT PHRASE (not a number): Expand it into a full sentence using the KPI context.\n"
-        "5. Never invent facts not in the user's input or the prior narrative.\n"
-        "6. Return ONLY valid JSON. No markdown fences, no extra text outside the JSON.\n\n"
-        'Example — delta: prior="Joule activation reached 79% this month, behind the 90% target.", '
-        'user says "change it to 83%" → '
-        '{"narrative": "Joule activation reached 83% this month, behind the 90% target.", '
-        '"ack": "Updated to 83% — noted!"}'
+        "  \"narrative\": the final narrative to record (1-3 sentences, professional, specific).\n"
+        "  \"ack\": one short friendly confirmation (≤12 words) to show the user.\n\n"
+        "NARRATIVE QUALITY RULES — follow strictly:\n"
+        "1. SAME-AS-LAST: User says 'same', 'no change', 'unchanged', 'copy', 'reuse', 'keep' "
+        "   → return the exact prior month narrative unchanged.\n"
+        "2. Always interpret the value against the target:\n"
+        "   - If value meets/exceeds target → note it is on track or ahead.\n"
+        "   - If value is close but below target → flag it as slightly below, momentum needed.\n"
+        "   - If value is significantly below target → call it behind target, flag as a risk.\n"
+        "3. If the user mentions ANY context beyond just a number (risks, reasons, actions, blockers, "
+        "   customer names, initiatives, timelines) → weave that context into the narrative. "
+        "   Do NOT discard it. This is the most important rule.\n"
+        "4. If the user gives only a number/% with no prior narrative → write a sentence that names "
+        "   the KPI, states the value, compares to target, and notes if on/off track.\n"
+        "5. If the user gives only a number/% AND there IS a prior narrative → update the figure "
+        "   in the prior narrative AND add a short status note (on track / at risk) if the trajectory changed.\n"
+        "6. Never invent facts not present in the user's input or prior narrative.\n"
+        "7. Write in third-person present tense ('Joule activation stands at…', 'Coverage reached…').\n"
+        "8. Return ONLY valid JSON. No markdown fences, no extra text.\n\n"
+        "Examples:\n"
+        "  KPI: Joule Activation Rate, Target: 90%, value: 83%, user: '83% but 3 large accounts still "
+        "  onboarding, expect 88% by end of month' → "
+        '  {"narrative": "Joule activation stands at 83% against the 90% target. Three large accounts '
+        'are currently onboarding and expected to lift the rate to approximately 88% by month-end, '
+        'though full target attainment remains at risk.", "ack": "Got it — noted the onboarding pipeline."}\n'
+        "  KPI: Pipeline Growth vs Q2, Target: +15%, value: 9%, user: '9%' → "
+        '  {"narrative": "Pipeline growth vs Q2 is at 9%, behind the +15% target. '
+        'Acceleration is needed in the remaining weeks to close the gap.", '
+        '"ack": "9% noted — flagged as behind target."}'
     )
 
     value_context = f'\nExplicit KPI value entered: {explicit_value}' if explicit_value else ""
@@ -1031,15 +1043,34 @@ def _ai_interpret_kpi_response(kpi_label, kpi_target, user_msg, prior_narrative,
     # ── Hard fallback (no AI Core / parse failure) ────────────────────────────
     same_phrases = ["same", "same as last month", "no change", "use last month",
                     "copy", "reuse", "keep same", "as before", "unchanged"]
-    if user_msg.lower().strip() in same_phrases or any(p in user_msg.lower() for p in same_phrases):
+    if user_msg.lower().strip() in same_phrases or any(p in same_phrases for p in [user_msg.lower()]):
         return (prior_narrative if prior_narrative else user_msg), "Reusing last month's update."
 
-    # Delta fallback — if user gave just a %, patch prior narrative manually
-    delta_match = re.search(r'(\d+(?:\.\d+)?)\s*%', user_msg)
-    if delta_match and prior_narrative:
-        new_pct = delta_match.group(0)
-        patched = re.sub(r'\d+(?:\.\d+)?\s*%', new_pct, prior_narrative, count=1)
-        return patched, f"Updated to {new_pct}."
+    # Delta fallback — build a target-aware sentence
+    delta_match = re.search(r'(\d+(?:\.\d+)?)\s*%?', user_msg)
+    if delta_match:
+        val_str = explicit_value or delta_match.group(0)
+        # Try to compare numerically to target
+        status_note = ""
+        try:
+            val_num = float(re.search(r'[\d.]+', val_str).group())
+            tgt_num = float(re.search(r'[\d.]+', kpi_target).group())
+            if val_num >= tgt_num:
+                status_note = " This meets the target."
+            elif val_num >= tgt_num * 0.9:
+                status_note = " Slightly below target — momentum needed to close the gap."
+            else:
+                status_note = " Behind the %s target — flagged as a risk." % kpi_target
+        except Exception:
+            pass
+        if prior_narrative:
+            patched = re.sub(r'\d+(?:\.\d+)?\s*%', val_str if '%' in val_str else val_str + '%',
+                             prior_narrative, count=1)
+            return patched + status_note, "Updated to %s." % val_str
+        else:
+            return ("%s stands at %s against the %s target.%s"
+                    % (kpi_label, val_str, kpi_target, status_note)), "Got it — recorded."
+    return user_msg, "Noted."
 
     return user_msg, ""
 
