@@ -825,12 +825,15 @@ def chat():
             resolved_value = "—"
             ai_ack = ""
         else:
+            log.info("AI interpret: kpi=%s target=%s explicit_val=%s user_msg=%r",
+                     kpi_label, kpi_tgt, explicit_value, user_msg_for_ai)
             resolved_narrative, ai_ack = _ai_interpret_kpi_response(
                 kpi_label=kpi_label, kpi_target=kpi_tgt,
                 user_msg=user_msg_for_ai,
                 prior_narrative=prior_narrative, prior_value=prior_value,
                 explicit_value=explicit_value,
             )
+            log.info("AI result: narrative=%r ack=%r", resolved_narrative[:80], ai_ack)
             resolved_value = explicit_value if explicit_value else _extract_value(resolved_narrative)
 
         sr_responses[kpi_id] = {
