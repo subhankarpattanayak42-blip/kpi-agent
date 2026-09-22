@@ -1404,6 +1404,16 @@ def admin_save_prior():
 
 # ── Admin API: Submissions ────────────────────────────────────────────────────
 
+@app.route("/admin/api/clear-all-submissions", methods=["POST"])
+def admin_clear_all_submissions():
+    _require_admin()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM kpi_sub_submissions")
+            cur.execute("DELETE FROM kpi_submissions")
+        conn.commit()
+    return jsonify({"success": True, "message": "All submission data cleared."})
+
 @app.route("/admin/api/submissions", methods=["GET"])
 def admin_get_submissions():
     _require_admin()
