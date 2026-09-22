@@ -916,13 +916,20 @@ def chat():
                     if pcts and len(pcts) == len(entries):
                         avg = round(sum(pcts) / len(pcts), 1)
                         agg_value = f"{avg}%"
-                        sr_parts = ", ".join(f"{sr}: {val}" for sr, val, _ in entries)
-                        agg_narrative = f"Regional average {avg}% (sub-regions — {sr_parts}). See sub-region breakdown for details."
                     else:
-                        # Non-% KPI — list all sub-region values
-                        sr_parts = "; ".join(f"{sr}: {val}" for sr, val, _ in entries if val)
                         agg_value = entries[0][1] if entries else ""
-                        agg_narrative = f"Sub-region summary — {sr_parts}. See sub-region breakdown for details." if sr_parts else (entries[0][2] if entries else "")
+                    # Find KPI target for this kid
+                    kpi_tgt = next((
+                        (k["target"] if isinstance(k, dict) else k[3])
+                        for k in kpis
+                        if (k["id"] if isinstance(k, dict) else k[0]) == kid
+                    ), "")
+                    kpi_lbl = next((
+                        (k["label"] if isinstance(k, dict) else k[2])
+                        for k in kpis
+                        if (k["id"] if isinstance(k, dict) else k[0]) == kid
+                    ), kid)
+                    agg_narrative = _ai_synthesise_regional_narrative(kpi_lbl, kpi_tgt, agg_value, entries)
                     agg[kid] = {
                         "value": agg_value,
                         "narrative": agg_narrative,
@@ -1078,7 +1085,69 @@ def _ai_interpret_kpi_response(kpi_label, kpi_target, user_msg, prior_narrative,
     return user_msg, ""
 
 
-def _build_sub_region_intro(sub_region, kpis, prior, sri=0, total_sr=1, done_sr=None):
+def _ai_synthesise_regional_narrative(kpi_label, kpi_target, agg_value, entries):
+    """
+    entries: list of (sub_region, value, narrative) across sub-regions.
+    Returns a 2-3 sentence regional narrative suitable for the Global Sponsor view.
+    Falls back to a structured summary if AI Core is unavailable.
+    """
+    sr_detail = "\n".join(
+        "  - %s (%s): %s" % (sr, val, nar)
+        for sr, val, nar in entries if nar and nar != "[Skipped]"
+    )
+    system_prompt = (
+        "You are writing the regional KPI summary for a Global Role Sponsor's monthly business review. "
+        "You receive the sub-region narratives for a single KPI and must synthesise them into a "
+        "2-3 sentence regional summary.\n\n"
+        "Rules:\n"
+        "1. State the regional aggregate value and compare it to the target — on track, at risk, or behind.\n"
+        "2. Highlight the strongest and weakest sub-regions by name if there is meaningful variation.\n"
+        "3. Surface any risks, blockers, or positive signals mentioned in the sub-region narratives — "
+        "   do not invent anything not in the input.\n"
+        "4. Write in third-person present tense, professional MBR tone. No bullet points.\n"
+        "5. Return ONLY valid JSON: {\"narrative\": \"...\"} — no markdown, no extra text."
+    )
+    user_prompt = (
+        "KPI: %s\nTarget: %s\nRegional aggregate: %s\n\nSub-region breakdown:\n%s"
+        % (kpi_label, kpi_target, agg_value, sr_detail)
+    )
+    raw = ai_core_chat([
+        {"role": "system", "content": system_prompt},
+        {"role": "user",   "content": user_prompt},
+    ], model="gpt-4o")
+    if raw:
+        try:
+            cleaned = re.sub(r"^```json\s*|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+            parsed = json.loads(cleaned)
+            nar = (parsed.get("narrative") or "").strip()
+            if nar:
+                return nar
+        except Exception:
+            m = re.search(r'\{.*\}', raw, re.DOTALL)
+            if m:
+                try:
+                    nar = (json.loads(m.group()).get("narrative") or "").strip()
+                    if nar:
+                        return nar
+                except Exception:
+                    pass
+    # Fallback: structured but still target-aware
+    sr_parts = ", ".join("%s: %s" % (sr, val) for sr, val, _ in entries if val)
+    status = ""
+    try:
+        agg_num = float(re.search(r'[\d.]+', str(agg_value)).group())
+        tgt_num = float(re.search(r'[\d.]+', str(kpi_target)).group())
+        if agg_num >= tgt_num:
+            status = " Region is on track against the %s target." % kpi_target
+        elif agg_num >= tgt_num * 0.9:
+            status = " Slightly below the %s target — improvement needed." % kpi_target
+        else:
+            status = " Behind the %s target — flagged as a regional risk." % kpi_target
+    except Exception:
+        pass
+    return "%s stands at %s across the region (%s).%s" % (kpi_label, agg_value, sr_parts, status)
+
+
     done_msg = f"<em>{done_sr} saved.</em><br><br>" if done_sr else ""
     return {
         "type": "sub_region_start",
@@ -1227,21 +1296,20 @@ def submit():
                     m = re.search(r'(\d+(?:\.\d+)?)\s*%', str(val))
                     if m:
                         pcts.append(float(m.group(1)))
-                if pcts and len(pcts) == len(entries):
-                    avg = round(sum(pcts) / len(pcts), 1)
-                    sr_parts = ", ".join(f"{sr}: {val}" for sr, val, _ in entries)
-                    agg[kid] = {
-                        "value": f"{avg}%",
-                        "narrative": f"Regional average {avg}% (sub-regions — {sr_parts}). See sub-region breakdown for details.",
-                        "timestamp": datetime.now().isoformat()
-                    }
-                else:
-                    sr_parts = "; ".join(f"{sr}: {val}" for sr, val, _ in entries if val)
-                    agg[kid] = {
-                        "value": entries[0][1] if entries else "",
-                        "narrative": f"Sub-region summary — {sr_parts}. See sub-region breakdown for details." if sr_parts else (entries[0][2] if entries else ""),
-                        "timestamp": datetime.now().isoformat()
-                    }
+                agg_value = ("%s%%" % round(sum(pcts)/len(pcts), 1)) if (pcts and len(pcts)==len(entries)) else (entries[0][1] if entries else "")
+                kpi_tgt = next((
+                    (k["target"] if isinstance(k, dict) else k[3])
+                    for k in kpis if (k["id"] if isinstance(k, dict) else k[0]) == kid
+                ), "")
+                kpi_lbl = next((
+                    (k["label"] if isinstance(k, dict) else k[2])
+                    for k in kpis if (k["id"] if isinstance(k, dict) else k[0]) == kid
+                ), kid)
+                agg[kid] = {
+                    "value": agg_value,
+                    "narrative": _ai_synthesise_regional_narrative(kpi_lbl, kpi_tgt, agg_value, entries),
+                    "timestamp": datetime.now().isoformat()
+                }
             db_save_submission(user, user["role"], user["region"], agg)
         else:
             db_save_submission(user, user["role"], user["region"], responses)
