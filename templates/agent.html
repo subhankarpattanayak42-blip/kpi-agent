@@ -6,7 +6,8 @@
 <title>KPI Status Agent — {{ user.name }}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; display: flex; flex-direction: column; }
+  html, body { height: 100%; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
   /* Top bar */
   .topbar { background: #00335B; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
@@ -27,12 +28,11 @@
   .step-dot.done { background: #F0AB00; }
   .step-dot.active { background: #007DB8; }
 
-  /* Main layout */
-  .main { display: flex; flex: 1; max-width: 1100px; margin: 24px auto; gap: 20px; width: 100%; padding: 0 20px; }
+  .main { display: flex; flex: 1; max-width: 1100px; margin: 0 auto; gap: 20px; width: 100%; padding: 20px; min-height: 0; overflow: hidden; }
 
   /* Chat panel */
-  .chat-panel { flex: 1; display: flex; flex-direction: column; }
-  .chat-window { background: white; border-radius: 12px; flex: 1; padding: 20px; overflow-y: auto; min-height: 420px; max-height: 500px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .chat-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .chat-window { background: white; border-radius: 12px; flex: 1; padding: 20px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
   .msg { max-width: 85%; padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6; }
   .msg.agent { background: #e8f4fb; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 3px; }
   .msg.user { background: #00335B; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
@@ -47,9 +47,17 @@
   .kpi-cat { font-size: 11px; color: #888; background: #fff3e0; padding: 2px 8px; border-radius: 4px; display: inline-block; }
   .prior-box { background: #fffbe6; border-left: 3px solid #F0AB00; padding: 8px 12px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #555; }
   .prior-label { font-size: 10px; font-weight: 700; color: #F0AB00; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .sr-header { background: #e3f2fd; border-left: 4px solid #007DB8; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 13px; }
+  .sr-badge { background: #007DB8; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-right: 6px; }
+  .sr-progress { font-size: 10px; color: #888; }
 
   /* Input area */
-  .input-area { background: white; border-radius: 12px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .input-area { background: white; border-radius: 12px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); flex-shrink: 0; }
+  .kpi-value-row { display: none; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .kpi-value-row label { font-size: 12px; font-weight: 700; color: #00335B; white-space: nowrap; }
+  .kpi-value-row input { border: 2px solid #007DB8; border-radius: 6px; padding: 8px 12px; font-size: 14px; font-weight: 700; width: 130px; color: #00335B; }
+  .kpi-value-row input:focus { outline: none; border-color: #F0AB00; }
+  .kpi-value-hint { font-size: 11px; color: #888; }
   .input-row { display: flex; gap: 10px; align-items: flex-end; }
   textarea { flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 12px; font-size: 14px; font-family: inherit; resize: none; min-height: 80px; transition: border-color 0.2s; }
   textarea:focus { outline: none; border-color: #007DB8; }
@@ -66,7 +74,7 @@
   .btn-skip:hover { background: #e0e8f0; }
 
   /* Side panel */
-  .side-panel { width: 280px; display: flex; flex-direction: column; gap: 14px; }
+  .side-panel { width: 280px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
   .side-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
   .side-title { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
   .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
@@ -82,6 +90,39 @@
   .typing span:nth-child(2) { animation-delay: 0.2s; }
   .typing span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+  /* KPI Tracker Panel */
+  .tracker-sr-block { margin-bottom: 14px; }
+  .tracker-sr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #007DB8; padding: 4px 0 6px; border-bottom: 2px solid #e8f4fb; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .tracker-sr-label .sr-badge-sm { background: #007DB8; color: white; font-size: 9px; padding: 2px 6px; border-radius: 3px; }
+  .tracker-kpi-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 6px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px; border: 1px solid transparent; }
+  .tracker-kpi-row:hover { background: #f0f4f8; border-color: #d0e4f4; }
+  .tracker-kpi-row.active-kpi { background: #e3f2fd; border-color: #007DB8; }
+  .tracker-kpi-row.editing-kpi { background: #fff8e1; border-color: #F0AB00; }
+  .tracker-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .tracker-status-dot.done { background: #28a745; }
+  .tracker-status-dot.active { background: #007DB8; animation: pulse-dot 1.2s infinite; }
+  .tracker-status-dot.pending { background: #ddd; }
+  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  .tracker-kpi-name { font-size: 11px; color: #333; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tracker-kpi-value { font-size: 11px; font-weight: 700; color: #00335B; background: #f0f4f8; padding: 2px 6px; border-radius: 4px; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
+  .tracker-kpi-value.has-value { background: #d4edda; color: #155724; }
+  .tracker-edit-btn { background: none; border: 1px solid #ccc; border-radius: 4px; font-size: 10px; color: #007DB8; padding: 2px 6px; cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
+  .tracker-edit-btn:hover { background: #007DB8; color: white; border-color: #007DB8; }
+  .tracker-refresh-btn { background: none; border: none; font-size: 11px; color: #aac8e0; cursor: pointer; padding: 0; }
+  .tracker-refresh-btn:hover { color: #007DB8; }
+  /* Edit drawer that appears in chat */
+  .edit-drawer { background: #fff8e1; border: 2px solid #F0AB00; border-radius: 10px; padding: 14px; margin-bottom: 8px; display: none; }
+  .edit-drawer.show { display: block; }
+  .edit-drawer-title { font-size: 12px; font-weight: 700; color: #856404; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .edit-drawer-kpi { font-size: 14px; font-weight: 700; color: #00335B; margin-bottom: 4px; }
+  .edit-drawer-current { font-size: 12px; color: #666; background: #f5f5f5; border-radius: 5px; padding: 6px 10px; margin-bottom: 10px; }
+  .edit-drawer-current strong { color: #00335B; }
+  .edit-close-btn { background: none; border: none; font-size: 16px; cursor: pointer; color: #aaa; line-height: 1; }
+  .edit-close-btn:hover { color: #dc3545; }
+  /* KPI confirmation toast */
+  .kpi-toast { display: none; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 700; color: #155724; margin-bottom: 8px; }
+  .kpi-toast.show { display: block; }
 
   .success-msg { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px; color: #155724; font-size: 14px; text-align: center; display: none; }
 </style>
@@ -106,9 +147,15 @@
   <div class="progress-label" id="progress-label">Starting your session…</div>
   <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
   <div class="progress-steps" id="step-dots">
-    {% for kpi in range(total_kpis) %}
-    <div class="step-dot" id="dot-{{ kpi }}" title="KPI {{ kpi+1 }}">{{ kpi+1 }}</div>
-    {% endfor %}
+    {% if sub_regions %}
+      {% for sr in sub_regions %}
+      <div class="step-dot" id="sr-dot-{{ loop.index0 }}" title="{{ sr }}">{{ loop.index }}</div>
+      {% endfor %}
+    {% else %}
+      {% for kpi in range(total_kpis) %}
+      <div class="step-dot" id="dot-{{ kpi }}" title="KPI {{ kpi+1 }}">{{ kpi+1 }}</div>
+      {% endfor %}
+    {% endif %}
   </div>
 </div>
 
@@ -116,6 +163,20 @@
   <div class="chat-panel">
     <div class="chat-window" id="chat-window"></div>
     <div class="input-area">
+      <div class="kpi-toast" id="kpi-toast"></div>
+      <div class="edit-drawer" id="edit-drawer">
+        <div class="edit-drawer-title">
+          <span>✏️ Editing KPI</span>
+          <button class="edit-close-btn" onclick="closeEditDrawer()">✕</button>
+        </div>
+        <div class="edit-drawer-kpi" id="edit-drawer-kpi"></div>
+        <div class="edit-drawer-current" id="edit-drawer-current"></div>
+      </div>
+      <div class="kpi-value-row" id="kpi-value-row">
+        <label for="kpi-value-input">KPI Value:</label>
+        <input type="text" id="kpi-value-input" placeholder="e.g. 82%" />
+        <span class="kpi-value-hint">Enter the number first, then describe below</span>
+      </div>
       <div class="input-row">
         <textarea id="user-input" placeholder="Type your update here…" rows="3"></textarea>
         <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Send →</button>
@@ -124,6 +185,16 @@
         <button class="btn btn-start" id="start-btn" onclick="startSession()">Begin Update →</button>
         <button class="btn btn-skip" id="skip-btn" onclick="skipKpi()" style="display:none">Skip this KPI</button>
         <button class="btn btn-submit" id="submit-btn" onclick="submitAll()">Submit to Sponsor ✓</button>
+        {% if sub_regions and sub_regions|length > 1 %}
+        <div style="position:relative;display:none;" id="sr-switch-wrap">
+          <button class="btn btn-skip" id="sr-switch-btn" onclick="toggleSrMenu()" style="display:none;font-size:11px;">⇄ Switch sub-region</button>
+          <div id="sr-switch-menu" style="display:none;position:absolute;bottom:40px;left:0;background:white;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);min-width:160px;z-index:100;">
+            {% for sr in sub_regions %}
+            <button onclick="jumpToSubRegion({{ loop.index0 }});toggleSrMenu();" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:none;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='none'">{{ sr }}</button>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
     <div class="success-msg" id="success-msg"></div>
@@ -135,12 +206,20 @@
       <div class="info-row"><span class="info-label">Name</span><span class="info-val">{{ user.name }}</span></div>
       <div class="info-row"><span class="info-label">Role</span><span class="info-val">{{ role_name }}</span></div>
       <div class="info-row"><span class="info-label">Region</span><span class="info-val">{{ user.region }}</span></div>
+      {% if sub_regions %}
+      <div class="info-row"><span class="info-label">Sub-regions</span><span class="info-val">{{ total_sub_regions }}</span></div>
+      {% endif %}
       <div class="info-row"><span class="info-label">Reporting month</span><span class="info-val">Sep 2026</span></div>
       <div class="info-row"><span class="info-label">Prior month</span><span class="info-val">{{ prior_month }}</span></div>
     </div>
     <div class="side-card">
-      <div class="side-title">KPI Checklist ({{ total_kpis }} total)</div>
-      <div id="kpi-checklist"></div>
+      <div class="side-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>KPI Tracker — click any row to edit</span>
+        <button class="tracker-refresh-btn" onclick="refreshTracker()" title="Refresh from DB">↻</button>
+      </div>
+      <div id="kpi-tracker">
+        <p style="font-size:12px;color:#aaa;font-style:italic;">Starting session…</p>
+      </div>
     </div>
     <div class="side-card" style="background:#fffbe6; border:1px solid #F0AB00;">
       <div class="side-title" style="color:#c87d00;">How this works</div>
@@ -153,10 +232,113 @@
 
 <script>
 const totalKpis = {{ total_kpis }};
+const subRegions = {{ sub_regions | tojson }};
+const totalSr = subRegions.length;
 let currentKpiIndex = -1;
-let kpiLabels = [];
+let currentSrIndex = 0;
+let completedSrIndices = new Set();
 let sessionStarted = false;
 
+// Tracker state — mirrored from DB
+let trackerData = { sub_regions: [], sub_data: {}, kpis: [] };
+let activeTrackerSri = null;
+let activeTrackerKi  = null;
+
+// ── Tracker ──────────────────────────────────────────────────
+async function refreshTracker() {
+  try {
+    const res = await fetch('/api/my-kpis');
+    trackerData = await res.json();
+    renderTracker();
+  } catch(e) { /* silent */ }
+}
+
+function renderTracker() {
+  const el = document.getElementById('kpi-tracker');
+  if (!el) return;
+  const { sub_regions, sub_data, kpis } = trackerData;
+  if (!kpis || !kpis.length) {
+    el.innerHTML = '<p style="font-size:12px;color:#aaa;font-style:italic;">No KPIs loaded yet.</p>';
+    return;
+  }
+  let html = '';
+  const srs = (sub_regions && sub_regions.length) ? sub_regions : [''];
+  srs.forEach(function(sr, sri) {
+    const srData = sub_data[sr] || {};
+    const filled = kpis.filter(function(k) {
+      const e = srData[k.id]; return e && e.value && e.value !== '—' && e.value !== '-';
+    }).length;
+    const srLabel = sr || 'All KPIs';
+    html += '<div class="tracker-sr-block">';
+    if (sr) {
+      html += '<div class="tracker-sr-label"><span>' + srLabel + '</span>'
+            + '<span style="font-size:10px;color:#888;">' + filled + '/' + kpis.length + '</span></div>';
+    }
+    kpis.forEach(function(kpi, ki) {
+      const entry = srData[kpi.id] || {};
+      const val   = entry.value || '';
+      const nar   = entry.narrative || '';
+      const hasVal = val && val !== '—' && val !== '-';
+      const isActive = (sri === activeTrackerSri && ki === activeTrackerKi);
+      const rowClass = isActive ? 'tracker-kpi-row editing-kpi' : 'tracker-kpi-row';
+      const dotClass = hasVal ? 'done' : (isActive ? 'active' : 'pending');
+      const valDisplay = hasVal ? val : '—';
+      const valClass = hasVal ? 'tracker-kpi-value has-value' : 'tracker-kpi-value';
+      // Encode for inline onclick
+      const safeLabel = kpi.label.replace(/'/g, '\\\'');
+      const safeVal   = val.replace(/'/g, '\\\'');
+      const safeNar   = nar.replace(/'/g, '\\\'').replace(/\n/g, ' ');
+      const editOnclick = sr
+        ? "trackerEdit(" + sri + "," + ki + ",'" + safeLabel + "','" + safeVal + "','" + safeNar + "','" + sr + "')"
+        : "trackerEditFlat(" + ki + ",'" + safeLabel + "','" + safeVal + "','" + safeNar + "')";
+      html += '<div class="' + rowClass + '" onclick="' + editOnclick + '">'
+            + '<div class="tracker-status-dot ' + dotClass + '"></div>'
+            + '<span class="tracker-kpi-name" title="' + kpi.label + '">' + kpi.label + '</span>'
+            + '<span class="' + valClass + '">' + valDisplay + '</span>'
+            + (hasVal
+               ? '<button class="tracker-edit-btn" onclick="event.stopPropagation();' + editOnclick + '">Edit</button>'
+               : '')
+            + '</div>';
+    });
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function trackerEdit(sri, ki, label, currentVal, currentNar, sr) {
+  activeTrackerSri = sri;
+  activeTrackerKi  = ki;
+  renderTracker();
+  // Show edit drawer with current value
+  const drawer = document.getElementById('edit-drawer');
+  document.getElementById('edit-drawer-kpi').textContent = label + (sr ? ' — ' + sr : '');
+  const hasVal = currentVal && currentVal !== '—';
+  document.getElementById('edit-drawer-current').innerHTML = hasVal
+    ? 'Current: <strong>' + currentVal + '</strong>' + (currentNar ? ' &nbsp;·&nbsp; <em>' + currentNar.substring(0,80) + (currentNar.length>80?'…':'') + '</em>' : '')
+    : '<em style="color:#aaa;">Not yet entered</em>';
+  drawer.classList.add('show');
+  // Pre-fill the inputs
+  const valInp = document.getElementById('kpi-value-input');
+  const txtInp = document.getElementById('user-input');
+  if (valInp) valInp.value = (currentVal && currentVal !== '—') ? currentVal : '';
+  if (txtInp) { txtInp.value = currentNar || ''; txtInp.focus(); }
+  // Trigger the backend edit
+  document.getElementById('send-btn').disabled = true;
+  apiCall('edit_kpi:' + sri + ':' + ki).then(function(data) { handleResponse(data); });
+}
+
+function trackerEditFlat(ki, label, currentVal, currentNar) {
+  trackerEdit(null, ki, label, currentVal, currentNar, null);
+}
+
+function closeEditDrawer() {
+  document.getElementById('edit-drawer').classList.remove('show');
+  activeTrackerSri = null;
+  activeTrackerKi  = null;
+  renderTracker();
+}
+
+// ── Chat helpers ──────────────────────────────────────────────
 function scrollToBottom() {
   const cw = document.getElementById('chat-window');
   cw.scrollTop = cw.scrollHeight;
@@ -195,35 +377,40 @@ function hideTyping() {
   if (t) t.remove();
 }
 
-function updateProgress(idx, total) {
-  const pct = total > 0 ? Math.round((idx / total) * 100) : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-label').textContent =
-    idx === 0 ? 'Ready to begin…' :
-    idx >= total ? 'All KPIs captured — ready to submit!' :
-    `KPI ${idx} of ${total} completed`;
-  for (let i = 0; i < total; i++) {
-    const dot = document.getElementById('dot-' + i);
-    if (!dot) continue;
-    dot.className = 'step-dot ' + (i < idx ? 'done' : i === idx ? 'active' : '');
-  }
+function showToast(msg) {
+  const t = document.getElementById('kpi-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 4000);
 }
 
-function updateChecklist(doneIdx) {
-  const cl = document.getElementById('kpi-checklist');
-  if (!kpiLabels.length) return;
-  cl.innerHTML = '';
-  kpiLabels.forEach((label, i) => {
-    const row = document.createElement('div');
-    row.className = 'kpi-list-item';
-    const dot = document.createElement('div');
-    dot.className = 'kpi-dot ' + (i < doneIdx ? 'done' : i === doneIdx ? 'active' : '');
-    const lbl = document.createElement('span');
-    lbl.textContent = label;
-    lbl.style.color = i < doneIdx ? '#28a745' : i === doneIdx ? '#007DB8' : '#888';
-    row.appendChild(dot); row.appendChild(lbl);
-    cl.appendChild(row);
-  });
+function updateProgress(srIdx, kpiIdx) {
+  if (totalSr > 0) {
+    const donePct = Math.round((completedSrIndices.size / totalSr) * 100);
+    document.getElementById('progress-fill').style.width = donePct + '%';
+    const srName = subRegions[srIdx] || '';
+    document.getElementById('progress-label').textContent =
+      completedSrIndices.size >= totalSr ? 'All sub-regions complete — ready to submit!' :
+      kpiIdx > 0 ? srName + ': KPI ' + kpiIdx + ' of ' + totalKpis :
+      srIdx < totalSr ? 'Sub-region ' + (srIdx+1) + ' of ' + totalSr + ': ' + srName : 'Ready to submit!';
+    subRegions.forEach(function(sr, i) {
+      const dot = document.getElementById('sr-dot-' + i);
+      if (!dot) return;
+      dot.className = 'step-dot ' + (completedSrIndices.has(i) ? 'done' : i === srIdx ? 'active' : '');
+    });
+  } else {
+    const pct = totalKpis > 0 ? Math.round((kpiIdx / totalKpis) * 100) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-label').textContent =
+      kpiIdx >= totalKpis ? 'All KPIs captured — ready to submit!' :
+      kpiIdx > 0 ? 'KPI ' + kpiIdx + ' of ' + totalKpis + ' completed' : 'Ready to begin…';
+    for (let i = 0; i < totalKpis; i++) {
+      const dot = document.getElementById('dot-' + i);
+      if (!dot) continue;
+      dot.className = 'step-dot ' + (i < kpiIdx ? 'done' : i === kpiIdx ? 'active' : '');
+    }
+  }
 }
 
 async function apiCall(message) {
@@ -240,33 +427,74 @@ async function apiCall(message) {
 async function startSession() {
   document.getElementById('start-btn').style.display = 'none';
   sessionStarted = true;
-  const data = await apiCall('');
-  handleResponse(data);
+  try {
+    await refreshTracker();
+    const data = await apiCall('');
+    handleResponse(data);
+  } catch(e) {
+    addMessage('Error loading session: ' + e.message, false);
+  }
 }
 
+function toggleSrMenu() {
+  const menu = document.getElementById('sr-switch-menu');
+  if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('sr-switch-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('sr-switch-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
 async function startKpis() {
-  addMessage('Yes, let\'s begin!', true);
+  addMessage("Yes, let's begin!", true);
   const data = await apiCall('start');
   handleResponse(data);
 }
 
+async function jumpToSubRegion(idx) {
+  const srName = subRegions[idx] || ('Sub-region ' + (idx+1));
+  addMessage('Starting ' + srName + ' →', true);
+  currentSrIndex = idx;
+  currentKpiIndex = 0;
+  if (completedSrIndices.has(idx)) completedSrIndices.delete(idx);
+  updateProgress(idx, 0);
+  const data = await apiCall('jump_sr:' + idx);
+  handleResponse(data);
+}
+
+async function startSubRegion() {
+  addMessage("Ready →", true);
+  updateProgress(currentSrIndex, 0);
+  const data = await apiCall('start_sr');
+  handleResponse(data);
+}
+
 async function sendMessage() {
-  const inp = document.getElementById('user-input');
-  const msg = inp.value.trim();
-  if (!msg) return;
-  addMessage(msg, true);
+  const inp    = document.getElementById('user-input');
+  const valInp = document.getElementById('kpi-value-input');
+  const narrative = inp.value.trim();
+  if (!narrative) return;
+  const kpiVal    = valInp ? valInp.value.trim() : '';
+  const msg       = kpiVal ? (kpiVal + '||' + narrative) : narrative;
+  const displayMsg = kpiVal ? ('[' + kpiVal + '] ' + narrative) : narrative;
+  addMessage(displayMsg, true);
   inp.value = '';
+  if (valInp) valInp.value = '';
   document.getElementById('send-btn').disabled = true;
   document.getElementById('skip-btn').style.display = 'none';
+  closeEditDrawer();
   currentKpiIndex++;
-  updateProgress(currentKpiIndex, totalKpis);
-  updateChecklist(currentKpiIndex);
+  updateProgress(currentSrIndex, currentKpiIndex);
   const data = await apiCall(msg);
   handleResponse(data);
 }
 
 async function skipKpi() {
-  addMessage('[Skipped — no update this month]', true);
+  addMessage('[Skipped]', true);
   document.getElementById('skip-btn').style.display = 'none';
   currentKpiIndex++;
   const data = await apiCall('[SKIP]');
@@ -274,41 +502,106 @@ async function skipKpi() {
 }
 
 function handleResponse(data) {
+  try {
   if (data.type === 'greeting') {
     addMessage(data.text, false);
-    if (data.show_start) {
+    const lastMsg = document.getElementById('chat-window').lastChild.lastChild;
+    if (data.sub_regions && data.sub_regions.length) {
+      const btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
+      data.sub_regions.forEach(function(sr, i) {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-start';
+        btn.style.cssText = 'font-size:12px;padding:8px 14px;';
+        btn.textContent = sr + ' →';
+        btn.onclick = (function(idx){ return function() { jumpToSubRegion(idx); }; })(i);
+        btnWrap.appendChild(btn);
+      });
+      const allBtn = document.createElement('button');
+      allBtn.className = 'btn btn-skip';
+      allBtn.style.cssText = 'font-size:12px;padding:8px 14px;';
+      allBtn.textContent = 'Begin in order →';
+      allBtn.onclick = startKpis;
+      btnWrap.appendChild(allBtn);
+      lastMsg.appendChild(btnWrap);
+    } else if (data.show_start) {
       const btn = document.createElement('button');
       btn.className = 'btn btn-start';
       btn.textContent = 'Begin →';
       btn.style.marginTop = '10px';
       btn.onclick = startKpis;
-      document.getElementById('chat-window').lastChild.lastChild.appendChild(btn);
+      lastMsg.appendChild(btn);
     }
-    updateProgress(0, totalKpis);
+    updateProgress(0, 0);
+  }
+  else if (data.type === 'sub_region_start') {
+    addMessage(data.text, false);
+    const kvRow = document.getElementById('kpi-value-row');
+    if (kvRow) kvRow.style.display = 'none';
+    const justDoneSri = (data.sri || 0) - 1;
+    if (justDoneSri >= 0) completedSrIndices.add(justDoneSri);
+    currentSrIndex = data.sri || 0;
+    currentKpiIndex = 0;
+    updateProgress(currentSrIndex, 0);
+    const lastMsg = document.getElementById('chat-window').lastChild.lastChild;
+    if (data.show_start_sr) {
+      const btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
+      const startBtn = document.createElement('button');
+      startBtn.className = 'btn btn-start';
+      startBtn.textContent = 'Start ' + (data.sub_region || 'sub-region') + ' →';
+      startBtn.onclick = startSubRegion;
+      btnWrap.appendChild(startBtn);
+      if (totalSr > 1) {
+        subRegions.forEach(function(sr, i) {
+          if (i === currentSrIndex) return;
+          const jBtn = document.createElement('button');
+          jBtn.className = 'btn btn-skip';
+          jBtn.style.cssText = 'font-size:11px;padding:6px 12px;';
+          jBtn.textContent = 'Go to ' + sr;
+          jBtn.onclick = (function(idx){ return function() { jumpToSubRegion(idx); }; })(i);
+          btnWrap.appendChild(jBtn);
+        });
+      }
+      lastMsg.appendChild(btnWrap);
+    }
+    refreshTracker();
   }
   else if (data.type === 'kpi') {
-    // Show AI acknowledgement before the next KPI prompt
-    if (data.acknowledgement) {
-      addMessage(data.acknowledgement, false);
+    if (data.confirmed_value && data.confirmed_value !== '—') {
+      showToast('✓ KPI saved — value: ' + data.confirmed_value);
+      refreshTracker();  // update tracker immediately after save
     }
-    // If AI resolved the narrative to something different from what user typed, show it
+    if (data.acknowledgement) addMessage(data.acknowledgement, false);
     if (data.resolved_narrative) {
       addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
     }
-    // Extract KPI label for checklist
-    const m = data.text.match(/kpi-name">(.*?)<\/span>/i);
-    if (m && kpiLabels.length < totalKpis) kpiLabels.push(m[1]);
     addMessage(data.text, false);
     document.getElementById('send-btn').disabled = false;
     document.getElementById('skip-btn').style.display = 'inline-block';
-    document.getElementById('user-input').focus();
-    updateProgress(data.kpi_index, data.total);
-    updateChecklist(data.kpi_index);
+    const kvRow = document.getElementById('kpi-value-row');
+    if (kvRow) {
+      kvRow.style.display = 'flex';
+      if (data.kpi_target) {
+        const hint = kvRow.querySelector('.kpi-value-hint');
+        if (hint) hint.textContent = 'Target: ' + data.kpi_target;
+      }
+      document.getElementById('kpi-value-input').focus();
+    }
+    const srSwitchBtn = document.getElementById('sr-switch-btn');
+    if (srSwitchBtn && totalSr > 1) srSwitchBtn.style.display = 'inline-block';
+    if (data.sri !== undefined && data.sri !== null) currentSrIndex = data.sri;
+    currentKpiIndex = data.kpi_index;
+    activeTrackerSri = data.sri !== undefined ? data.sri : null;
+    activeTrackerKi  = data.kpi_index;
+    updateProgress(currentSrIndex, data.kpi_index);
+    renderTracker();
   }
   else if (data.type === 'summary') {
-    if (data.acknowledgement) {
-      addMessage(data.acknowledgement, false);
+    if (data.confirmed_value && data.confirmed_value !== '—') {
+      showToast('✓ KPI saved — value: ' + data.confirmed_value);
     }
+    if (data.acknowledgement) addMessage(data.acknowledgement, false);
     if (data.resolved_narrative) {
       addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
     }
@@ -316,27 +609,39 @@ function handleResponse(data) {
     document.getElementById('send-btn').disabled = true;
     document.getElementById('skip-btn').style.display = 'none';
     document.getElementById('submit-btn').style.display = 'inline-block';
-    updateProgress(totalKpis, totalKpis);
-    updateChecklist(totalKpis);
+    const kvRow = document.getElementById('kpi-value-row');
+    if (kvRow) kvRow.style.display = 'none';
+    closeEditDrawer();
+    subRegions.forEach(function(_, i) { completedSrIndices.add(i); });
+    updateProgress(totalSr || totalKpis, totalKpis);
+    refreshTracker();
   }
   else if (data.type === 'message') {
     addMessage(data.text, false);
   }
   scrollToBottom();
+  } catch(e) {
+    addMessage('<span style="color:red">JS error: ' + e.message + '</span>', false);
+    console.error('handleResponse error:', e);
+  }
 }
 
 async function submitAll() {
   document.getElementById('submit-btn').disabled = true;
   document.getElementById('submit-btn').textContent = 'Submitting…';
-  const res = await fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  const res = await fetch('/api/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}'
+  });
   const data = await res.json();
   if (data.success) {
-    document.getElementById('input-area') && (document.querySelector('.input-area').style.display = 'none');
+    document.querySelector('.input-area').style.display = 'none';
     const sm = document.getElementById('success-msg');
     sm.style.display = 'block';
-    sm.innerHTML = '&#10003; ' + data.text + '<br><br><a href="/logout" style="color:#155724; font-weight:700;">Sign out</a>';
+    sm.innerHTML = '&#10003; ' + data.text + '<br><br><a href="/logout" style="color:#155724;font-weight:700;">Sign out</a>';
     addMessage(data.text, false);
-    updateProgress(totalKpis, totalKpis);
+    updateProgress(totalSr || totalKpis, totalKpis);
   }
 }
 
@@ -347,8 +652,7 @@ document.getElementById('user-input').addEventListener('keydown', function(e) {
   }
 });
 
-// Auto-start greeting
-window.onload = () => startSession();
+window.onload = function() { startSession(); };
 </script>
 </body>
 </html>
