@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MU Review — {{ user.region }} EA · {{ current_month }}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; }
+
+/* ── Top bar ── */
+.topbar {
+  background: #00335B;
+  color: white;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.topbar-left { display: flex; align-items: center; gap: 16px; }
+.topbar-dot { width: 32px; height: 32px; background: #F0AB00; border-radius: 50%; flex-shrink: 0; }
+.topbar-title { font-size: 16px; font-weight: 700; }
+.topbar-sub { font-size: 12px; opacity: 0.75; margin-top: 1px; }
+.user-pill {
+  background: rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.back-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.back-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ── Page wrap ── */
+.page-wrap { max-width: 1400px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* ── Header card ── */
+.page-header {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.page-header-left h1 { font-size: 20px; color: #00335B; font-weight: 700; }
+.page-header-left p  { font-size: 13px; color: #666; margin-top: 3px; }
+.legend { display: flex; align-items: center; gap: 18px; font-size: 12px; color: #555; }
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.dot-green  { background: #28a745; }
+.dot-amber  { background: #F0AB00; }
+.dot-red    { background: #dc3545; }
+.dot-grey   { background: #ccc; border: 1px solid #bbb; }
+
+/* ── Save-all bar ── */
+.save-bar {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 10px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #7a5c00;
+}
+.save-bar strong { color: #00335B; }
+.save-indicator { font-size: 12px; color: #888; }
+.save-indicator.saving { color: #F0AB00; }
+.save-indicator.saved  { color: #28a745; }
+
+/* ── Matrix table ── */
+.matrix-wrap {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.cat-header {
+  background: #00335B;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 10px 16px;
+}
+table.mx-tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+table.mx-tbl thead th {
+  background: #f5f7fa;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  border-bottom: 2px solid #e0e0e0;
+  text-align: left;
+  white-space: nowrap;
+}
+table.mx-tbl thead th.kpi-col   { width: 200px; }
+table.mx-tbl thead th.mu-col    { width: 240px; }
+table.mx-tbl thead th.sum-col   { min-width: 260px; }
+table.mx-tbl tbody tr { border-bottom: 1px solid #eee; }
+table.mx-tbl tbody tr:last-child { border-bottom: none; }
+table.mx-tbl tbody tr:hover { background: #fafbff; }
+table.mx-tbl td { padding: 12px 14px; vertical-align: top; font-size: 13px; }
+
+/* KPI label cell */
+.kpi-name { font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+.kpi-target { font-size: 11px; color: #888; background: #f0f0f0; border-radius: 4px; padding: 2px 7px; display: inline-block; margin-top: 3px; }
+
+/* MU data cell */
+.mu-cell { min-width: 230px; }
+.mu-cell.not-submitted {
+  background: #fffbea;
+  border-left: 3px solid #F0AB00;
+}
+.mu-cell-inner { display: flex; flex-direction: column; gap: 5px; }
+.mu-val-row { display: flex; align-items: center; gap: 8px; }
+.mu-val { font-size: 18px; font-weight: 700; color: #00335B; }
+.mu-narrative { font-size: 12px; color: #555; line-height: 1.45; }
+.not-submitted-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b36e00;
+  background: #fff3cd;
+  border-radius: 4px;
+  padding: 3px 8px;
+  display: inline-block;
+}
+
+/* Summary cell */
+.sum-cell { background: #f9fff9; }
+.sum-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  border: 1px solid #d0e8d0;
+  border-radius: 7px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #333;
+  resize: vertical;
+  transition: border-color 0.15s;
+  background: white;
+}
+.sum-textarea:focus { outline: none; border-color: #007DB8; }
+.sum-save-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.sum-save-btn {
+  padding: 5px 14px;
+  background: #00335B;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sum-save-btn:hover { background: #007DB8; }
+.sum-status { font-size: 11px; color: #28a745; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+.sum-status.show { opacity: 1; }
+
+/* RAG dot */
+.rag { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.rag-green  { background: #28a745; }
+.rag-amber  { background: #F0AB00; }
+.rag-red    { background: #dc3545; }
+.rag-grey   { background: #ccc; border: 1px solid #bbb; }
+
+/* Completion chips at top */
+.mu-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.mu-chip {
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid transparent;
+}
+.mu-chip.complete  { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+.mu-chip.partial   { background: #fffde7; color: #f57f17; border-color: #ffe082; }
+.mu-chip.empty     { background: #fce4ec; color: #b71c1c; border-color: #ef9a9a; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #333;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 999;
+  max-width: 340px;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #c62828; }
+.toast.ok    { background: #2e7d32; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-dot"></div>
+    <div>
+      <div class="topbar-title">GTM26 KPI Agent — MU Review</div>
+      <div class="topbar-sub">{{ user.region }} EA · {{ current_month }}</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="user-pill">{{ user.name }} · EA / {{ user.region }}</div>
+    <a href="/agent" class="back-btn">← My KPI Update</a>
+    <a href="/logout" class="back-btn">Sign out</a>
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Market Unit Review — {{ user.region }} EA</h1>
+      <p>DRI submissions across all Market Units · {{ current_month }} · Add your regional assessment in the Summary column</p>
+    </div>
+    <div>
+      <!-- Completion chips -->
+      <div class="mu-chips" id="mu-chips">
+        {% for sr in sub_regions %}
+        {% set sr_data = sub_data.get(sr, {}) %}
+        {% set filled = sr_data | length %}
+        {% set total  = kpis | length %}
+        <div class="mu-chip {% if filled == total and total > 0 %}complete{% elif filled > 0 %}partial{% else %}empty{% endif %}" id="chip-{{ loop.index0 }}">
+          <span>{{ sr }}</span>
+          <span id="chip-count-{{ loop.index0 }}">{{ filled }}/{{ total }}</span>
+          {% if filled == total and total > 0 %}<span>✓</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="legend" style="margin-top:10px;">
+        <div class="legend-item"><div class="dot dot-green"></div> At/above target</div>
+        <div class="legend-item"><div class="dot dot-amber"></div> Within 70–99%</div>
+        <div class="legend-item"><div class="dot dot-red"></div> Below 70%</div>
+        <div class="legend-item"><div class="dot dot-grey"></div> Not submitted</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save-all indicator -->
+  <div class="save-bar">
+    <div><strong>{{ user.name }}</strong> · Review all DRI KPI submissions below and add your regional summary for each row.</div>
+    <div class="save-indicator" id="global-save-status">Auto-saves on blur</div>
+  </div>
+
+  <!-- Matrix per category -->
+  {% for cat, cat_kpis in categories.items() %}
+  <div class="matrix-wrap">
+    <div class="cat-header">{{ cat }}</div>
+    <table class="mx-tbl">
+      <thead>
+        <tr>
+          <th class="kpi-col">KPI</th>
+          {% for sr in sub_regions %}
+          <th class="mu-col">{{ sr }}</th>
+          {% endfor %}
+          <th class="sum-col">Leader Summary (per KPI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kpi in cat_kpis %}
+        <tr id="row-{{ kpi.id }}">
+          <!-- KPI label -->
+          <td>
+            <div class="kpi-name">{{ kpi.label }}</div>
+            {% if kpi.target %}<span class="kpi-target">Target: {{ kpi.target }}</span>{% endif %}
+          </td>
+          <!-- One cell per MU -->
+          {% for sr in sub_regions %}
+          {% set sr_data = sub_data.get(sr, {}) %}
+          {% set cell = sr_data.get(kpi.id, None) %}
+          <td class="mu-cell {% if not cell %}not-submitted{% endif %}">
+            {% if cell %}
+            <div class="mu-cell-inner">
+              <div class="mu-val-row">
+                <div class="rag {{ 'rag-green' if cell.get('rag', '') == 'green' else ('rag-red' if cell.get('rag', '') == 'red' else 'rag-amber') }}" id="rag-{{ kpi.id }}-{{ loop.index0 }}"></div>
+                <span class="mu-val">{{ cell.get('value', '') }}</span>
+              </div>
+              <div class="mu-narrative">{{ cell.get('narrative', '') }}</div>
+            </div>
+            {% else %}
+            <span class="not-submitted-label">⚠ Not submitted</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+          <!-- Summary textarea -->
+          <td class="sum-cell">
+            <textarea class="sum-textarea"
+              id="sum-{{ kpi.id }}"
+              placeholder="Add your regional summary for {{ kpi.label }}…"
+              onblur="saveSummary('{{ kpi.id }}')"
+            >{{ mu_summaries.get(kpi.id, '') }}</textarea>
+            <div class="sum-save-row">
+              <button class="sum-save-btn" onclick="saveSummary('{{ kpi.id }}')">Save</button>
+              <span class="sum-status" id="sum-status-{{ kpi.id }}">✓ Saved</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+</div><!-- /.page-wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUB_REGIONS  = {{ sub_regions | tojson }};
+const KPI_DEFS     = {{ kpis | tojson }};
+const SUB_DATA     = {{ sub_data | tojson }};
+const MU_SUMMARIES = {{ mu_summaries | tojson }};
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(function() { t.className = 'toast'; }, 3000);
+}
+
+// ── RAG logic (simple: no target comparison, just show amber unless overridden) ──
+// Each cell already has value filled in. We derive RAG from value vs target client-side.
+function deriveRag(value, target) {
+  if (!value || !target) return 'amber';
+  // Strip % and compare numerically if possible
+  var v = parseFloat(String(value).replace('%','').replace(',',''));
+  var t = parseFloat(String(target).replace('%','').replace('>','').replace('<','').replace(',',''));
+  if (isNaN(v) || isNaN(t)) return 'amber';
+  var ratio = v / t;
+  if (ratio >= 1.0) return 'green';
+  if (ratio >= 0.70) return 'amber';
+  return 'red';
+}
+
+// Apply RAG colours on load
+KPI_DEFS.forEach(function(kpi) {
+  SUB_REGIONS.forEach(function(sr, sri) {
+    var cell = (SUB_DATA[sr] || {})[kpi.id];
+    var el   = document.getElementById('rag-' + kpi.id + '-' + sri);
+    if (!el) return;
+    var rag = deriveRag(cell ? cell.value : null, kpi.target);
+    el.className = 'rag rag-' + rag;
+  });
+});
+
+// ── Save summary ────────────────────────────────────────────────────────────
+async function saveSummary(kpiId) {
+  var textarea = document.getElementById('sum-' + kpiId);
+  var statusEl = document.getElementById('sum-status-' + kpiId);
+  var globalEl = document.getElementById('global-save-status');
+  if (!textarea) return;
+  var summary = textarea.value.trim();
+  if (globalEl) { globalEl.textContent = 'Saving…'; globalEl.className = 'save-indicator saving'; }
+  try {
+    var res = await fetch('/api/mu-summary', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kpi_id: kpiId, summary: summary})
+    });
+    var d = await res.json();
+    if (d.success) {
+      if (statusEl) { statusEl.classList.add('show'); setTimeout(function() { statusEl.classList.remove('show'); }, 2500); }
+      if (globalEl) { globalEl.textContent = 'All changes saved'; globalEl.className = 'save-indicator saved'; }
+    } else {
+      showToast('Save error: ' + (d.error || 'unknown'), 'error');
+      if (globalEl) { globalEl.textContent = 'Auto-saves on blur'; globalEl.className = 'save-indicator'; }
+    }
+  } catch(e) {
+    showToast('Network error: ' + e.message, 'error');
+    if (globalEl) { globalEl.textContent = 'Auto-saves on blur'; globalEl.className = 'save-indicator'; }
+  }
+}
+</script>
+</body>
+</html>

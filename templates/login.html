@@ -23,7 +23,33 @@
   .divider { border: none; border-top: 1px solid #eee; margin: 20px 0; }
   .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin-left: 6px; }
   .badge.leader { background: #e3f2fd; color: #0066b2; }
-  .badge.sponsor { background: #fff3e0; color: #e65100; }
+  .badge.dri    { background: #e8f5e9; color: #2e7d32; }
+
+  /* Requirement button */
+  .req-btn { width: 100%; padding: 11px; background: white; color: #007DB8; border: 2px solid #007DB8; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 10px; }
+  .req-btn:hover { background: #007DB8; color: white; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: 12px; padding: 32px; width: 480px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.35); position: relative; }
+  .modal h3 { font-size: 18px; color: #00335B; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: #666; margin-bottom: 20px; }
+  .modal label { font-size: 12px; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
+  .modal input, .modal textarea, .modal select { width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 7px; font-size: 14px; color: #333; margin-bottom: 14px; font-family: inherit; }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { outline: none; border-color: #007DB8; }
+  .modal textarea { min-height: 100px; resize: vertical; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-submit { flex: 1; padding: 12px; background: #00335B; color: white; border: none; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .modal-submit:hover { background: #007DB8; }
+  .modal-cancel { padding: 12px 20px; background: none; border: 2px solid #ddd; border-radius: 7px; font-size: 14px; color: #888; cursor: pointer; width: auto; }
+  .modal-cancel:hover { border-color: #bbb; color: #555; background: none; }
+  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 20px; color: #bbb; cursor: pointer; width: auto; padding: 0; }
+  .modal-close:hover { color: #555; background: none; }
+  .modal-success { display: none; text-align: center; padding: 20px 0; }
+  .modal-success .tick { font-size: 40px; margin-bottom: 10px; }
+  .modal-success p { color: #28a745; font-weight: 600; font-size: 15px; }
+  .modal-success small { color: #888; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -49,9 +75,17 @@
       {% for sponsor in sponsors %}
       <option value="{{ sponsor.id }}">{{ sponsor.name }} — Global Sponsor ({{ sponsor.managed_role or sponsor.role }})</option>
       {% endfor %}
+      {% if dris %}
+      <option disabled>──────────────────────</option>
+      {% for dri in dris %}
+      <option value="{{ dri.id }}">{{ dri.name }} — DRI · {{ dri.sub_region }} ({{ dri.region }})</option>
+      {% endfor %}
+      {% endif %}
     </select>
     <button type="submit">Continue →</button>
   </form>
+  <hr class="divider">
+  <button class="req-btn" onclick="openReqModal()">💡 Share a Requirement or Feedback</button>
   <hr class="divider">
   <p style="font-size:11px; color:#aaa; text-align:center;">
     GTM26 Role Transformation · Prototype v1.0 · SAP Internal
@@ -60,5 +94,84 @@
     <a href="/admin/login" style="font-size:11px; color:#bbb; text-decoration:none;">⚙ Admin</a>
   </p>
 </div>
+
+<!-- Requirements Modal -->
+<div class="modal-overlay" id="req-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeReqModal()">✕</button>
+    <div id="req-form-body">
+      <h3>💡 Share a Requirement</h3>
+      <p>Have an idea, a feature request, or feedback about the KPI Agent? Share it here — Subhankar will review it.</p>
+      <label>Your Name</label>
+      <input type="text" id="req-name" placeholder="e.g. Dan Fagan">
+      <label>Your Role (optional)</label>
+      <select id="req-role">
+        <option value="">— Select —</option>
+        <option>EA</option>
+        <option>DA</option>
+        <option>CEP</option>
+        <option>Sponsor</option>
+        <option>Other</option>
+      </select>
+      <label>Requirement / Feedback</label>
+      <textarea id="req-text" placeholder="Describe what you'd like to see, what's not working, or any improvement ideas…"></textarea>
+      <div class="modal-btns">
+        <button class="modal-submit" onclick="submitRequirement()">Submit →</button>
+        <button class="modal-cancel" onclick="closeReqModal()">Cancel</button>
+      </div>
+    </div>
+    <div class="modal-success" id="req-success">
+      <div class="tick">✅</div>
+      <p>Requirement saved!</p>
+      <small>Thank you — Subhankar will review it shortly.</small><br><br>
+      <button class="modal-submit" style="max-width:180px;margin:0 auto;" onclick="closeReqModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openReqModal() {
+  document.getElementById('req-modal').classList.add('open');
+  document.getElementById('req-name').focus();
+}
+function closeReqModal() {
+  document.getElementById('req-modal').classList.remove('open');
+  // Reset for next time
+  setTimeout(function() {
+    document.getElementById('req-form-body').style.display = 'block';
+    document.getElementById('req-success').style.display = 'none';
+    document.getElementById('req-name').value = '';
+    document.getElementById('req-role').value = '';
+    document.getElementById('req-text').value = '';
+  }, 300);
+}
+document.getElementById('req-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeReqModal();
+});
+async function submitRequirement() {
+  const name = document.getElementById('req-name').value.trim();
+  const role = document.getElementById('req-role').value;
+  const req  = document.getElementById('req-text').value.trim();
+  if (!name) { document.getElementById('req-name').focus(); return; }
+  if (!req)  { document.getElementById('req-text').focus(); return; }
+  const btn = document.querySelector('.modal-submit');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/requirements', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: name, role: role, requirement: req})
+    });
+    const d = await res.json();
+    if (d.success) {
+      document.getElementById('req-form-body').style.display = 'none';
+      document.getElementById('req-success').style.display = 'block';
+    } else {
+      alert('Error: ' + (d.error || 'unknown'));
+    }
+  } catch(e) { alert('Failed: ' + e.message); }
+  btn.disabled = false; btn.textContent = 'Submit →';
+}
+</script>
 </body>
 </html>

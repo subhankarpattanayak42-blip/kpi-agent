@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVJ RACI Interactive Explorer · SAP Internal</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; min-height: 100vh; color: #1a1a1a; }
+
+/* ── Top bar ── */
+.topbar {
+  background: #00335B;
+  color: white;
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.topbar-brand { display: flex; align-items: center; gap: 14px; }
+.topbar-dot { width: 30px; height: 30px; background: #F0AB00; border-radius: 50%; flex-shrink: 0; }
+.topbar-title { font-size: 16px; font-weight: 700; }
+.topbar-sub { font-size: 11px; opacity: 0.7; }
+.topbar-badge { background: rgba(240,171,0,0.2); border: 1px solid #F0AB00; color: #F0AB00; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 600; }
+
+/* ── Stats bar ── */
+.stats-bar {
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 28px;
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+.stat { text-align: center; }
+.stat-num { font-size: 22px; font-weight: 800; color: #00335B; }
+.stat-lbl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Mode tabs ── */
+.mode-tabs {
+  background: white;
+  padding: 0 28px;
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid #e0e0e0;
+}
+.mode-tab {
+  padding: 14px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.mode-tab:hover { color: #00335B; }
+.mode-tab.active { color: #00335B; border-bottom-color: #F0AB00; }
+
+/* ── Main content area ── */
+.main { max-width: 1440px; margin: 0 auto; padding: 24px 28px 60px; }
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; min-width: 180px; flex: 1; }
+.filter-label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+.filter-group select, .filter-group input {
+  padding: 9px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  background: white;
+  font-family: inherit;
+}
+.filter-group select:focus, .filter-group input:focus { outline: none; border-color: #007DB8; }
+.raci-filter { display: flex; gap: 8px; flex-wrap: wrap; }
+.raci-check { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; cursor: pointer; padding: 5px 10px; border-radius: 6px; border: 2px solid #e0e0e0; background: white; transition: all 0.1s; user-select: none; }
+.raci-check:hover { border-color: #007DB8; }
+.raci-check.active-R { background: #e8f5e9; border-color: #28a745; color: #1b5e20; }
+.raci-check.active-A { background: #e3f2fd; border-color: #00335B; color: #00335B; }
+.raci-check.active-C { background: #f5f5f5; border-color: #999; color: #444; }
+.raci-check.active-I { background: #fffde7; border-color: #f9a825; color: #7a5c00; }
+
+/* ── Results count ── */
+.results-info { font-size: 12px; color: #888; margin-bottom: 12px; }
+.results-info strong { color: #00335B; }
+
+/* ── Table ── */
+.results-table-wrap { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.results-table-wrap table { width: 100%; border-collapse: collapse; }
+.results-table-wrap thead th {
+  background: #00335B;
+  color: white;
+  padding: 11px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  white-space: nowrap;
+}
+.results-table-wrap tbody tr { border-bottom: 1px solid #eee; }
+.results-table-wrap tbody tr:last-child { border-bottom: none; }
+.results-table-wrap tbody tr:hover { background: #f8faff; }
+.results-table-wrap tbody td { padding: 10px 14px; font-size: 12px; vertical-align: middle; }
+.results-table-wrap tbody td.activity-col { font-size: 13px; max-width: 340px; }
+
+/* ── RACI badges ── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-R  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+.badge-A  { background: #e3f2fd; color: #00335B; border: 1px solid #90caf9; }
+.badge-C  { background: #f5f5f5; color: #444; border: 1px solid #ccc; }
+.badge-I  { background: #fffde7; color: #7a5c00; border: 1px solid #ffe082; }
+.badge-AR { background: linear-gradient(90deg, #e3f2fd 50%, #e8f5e9 50%); color: #00335B; border: 1px solid #90caf9; }
+.badge-RC { background: linear-gradient(90deg, #e8f5e9 50%, #f5f5f5 50%); color: #1b5e20; border: 1px solid #a5d6a7; }
+.badge-RI { background: linear-gradient(90deg, #e8f5e9 50%, #fffde7 50%); color: #1b5e20; border: 1px solid #a5d6a7; }
+.badge-CI { background: linear-gradient(90deg, #f5f5f5 50%, #fffde7 50%); color: #444; border: 1px solid #ccc; }
+.badge-other { background: #fff3e0; color: #bf360c; border: 1px solid #ffcc80; }
+
+/* ── Segment pill ── */
+.seg-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.seg-AI         { background: #e8f0fe; color: #1a237e; }
+.seg-BTP        { background: #e0f2f1; color: #004d40; }
+.seg-C2C        { background: #fce4ec; color: #880e4f; }
+.seg-Corporate  { background: #e8f5e9; color: #1b5e20; }
+.seg-Partner    { background: #fff3e0; color: #e65100; }
+.seg-EntStd     { background: #f3e5f5; color: #4a148c; }
+.seg-EntRISE    { background: #e3f2fd; color: #0d47a1; }
+
+/* ── Phase pill ── */
+.phase-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ph-DISCOVER  { background: #e8f0fe; color: #1a237e; }
+.ph-SELECT    { background: #e0f7fa; color: #006064; }
+.ph-ADOPT     { background: #e8f5e9; color: #1b5e20; }
+.ph-DERIVE    { background: #fff3e0; color: #e65100; }
+.ph-EXTEND    { background: #fce4ec; color: #880e4f; }
+.ph-PORTFOLIO { background: #f3e5f5; color: #4a148c; }
+
+/* ── Role profile card ── */
+.role-card {
+  background: white;
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+.role-card h2 { font-size: 18px; color: #00335B; margin-bottom: 4px; }
+.role-card .role-sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+.role-phases { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.role-phase-chip {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+  background: white;
+  transition: all 0.15s;
+}
+.role-phase-chip.active { background: #00335B; color: white; border-color: #00335B; }
+.role-phase-chip:hover:not(.active) { border-color: #007DB8; color: #007DB8; }
+
+/* ── Phase cards for By Phase mode ── */
+.phase-section { margin-bottom: 28px; }
+.phase-section h2 { font-size: 17px; color: #00335B; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+
+/* ── Segment matrix ── */
+.seg-matrix-wrap { background: white; border-radius: 12px; overflow-x: auto; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 24px; }
+.seg-matrix-wrap table { width: 100%; border-collapse: collapse; min-width: 700px; }
+.seg-matrix-wrap thead th {
+  background: #00335B;
+  color: white;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-align: center;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.15);
+}
+.seg-matrix-wrap thead th.act-col { text-align: left; min-width: 280px; background: #002a4a; }
+.seg-matrix-wrap thead th.phase-header { background: #007DB8; }
+.seg-matrix-wrap tbody tr { border-bottom: 1px solid #eee; }
+.seg-matrix-wrap tbody tr:hover { background: #f8faff; }
+.seg-matrix-wrap tbody td { padding: 8px 12px; font-size: 12px; vertical-align: middle; text-align: center; border-right: 1px solid #f0f0f0; }
+.seg-matrix-wrap tbody td.act-col { text-align: left; font-weight: 500; color: #1a1a1a; }
+.seg-matrix-wrap tbody td.phase-sep { background: #f5f9ff; font-weight: 700; color: #007DB8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ── Phase selector pills ── */
+.phase-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.phase-pill-btn {
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #555;
+  transition: all 0.15s;
+}
+.phase-pill-btn:hover { border-color: #007DB8; color: #007DB8; }
+.phase-pill-btn.active { background: #00335B; color: white; border-color: #00335B; }
+
+/* ── Segment selector pills ── */
+.seg-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.seg-pill-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #555;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.seg-pill-btn:hover { border-color: #007DB8; color: #007DB8; }
+.seg-pill-btn.active { background: #00335B; color: white; border-color: #00335B; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: #aaa;
+  font-size: 14px;
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 11px;
+  color: #aaa;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .filter-bar { flex-direction: column; }
+  .filter-group { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-dot"></div>
+    <div>
+      <div class="topbar-title">CVJ RACI Interactive Explorer</div>
+      <div class="topbar-sub">Customer Value Journey · All Engagement Segments</div>
+    </div>
+  </div>
+  <span class="topbar-badge">SAP Internal</span>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total Activities</div></div>
+  <div class="stat"><div class="stat-num">7</div><div class="stat-lbl">Segments</div></div>
+  <div class="stat"><div class="stat-num" id="stat-roles">—</div><div class="stat-lbl">Unique Roles</div></div>
+  <div class="stat"><div class="stat-num">6</div><div class="stat-lbl">CVJ Phases</div></div>
+  <div style="margin-left:auto;font-size:12px;color:#888;">
+    <strong style="color:#00335B;">How to use:</strong> Pick a mode below → filter by role, phase, or segment
+  </div>
+</div>
+
+<!-- Mode tabs -->
+<div class="mode-tabs">
+  <div class="mode-tab active" onclick="setMode('role')" id="tab-role">👤 By Role</div>
+  <div class="mode-tab" onclick="setMode('phase')" id="tab-phase">📅 By Phase</div>
+  <div class="mode-tab" onclick="setMode('segment')" id="tab-segment">🏢 By Segment</div>
+</div>
+
+<div class="main">
+
+  <!-- ═══════════════════ BY ROLE MODE ═══════════════════ -->
+  <div id="mode-role">
+    <div class="filter-bar">
+      <div class="filter-group" style="min-width:240px;">
+        <div class="filter-label">Role</div>
+        <select id="role-select" onchange="renderRoleMode()">
+          <option value="">— Select a role —</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:180px;">
+        <div class="filter-label">Segment (optional)</div>
+        <select id="role-seg-filter" onchange="renderRoleMode()">
+          <option value="">All Segments</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:180px;">
+        <div class="filter-label">Phase (optional)</div>
+        <select id="role-phase-filter" onchange="renderRoleMode()">
+          <option value="">All Phases</option>
+          <option>DISCOVER</option>
+          <option>SELECT</option>
+          <option>ADOPT</option>
+          <option>DERIVE</option>
+          <option>EXTEND</option>
+          <option>PORTFOLIO</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">RACI Filter</div>
+        <div class="raci-filter">
+          <div class="raci-check active-R" id="chk-R" onclick="toggleRaci('R')">R</div>
+          <div class="raci-check active-A" id="chk-A" onclick="toggleRaci('A')">A</div>
+          <div class="raci-check active-C" id="chk-C" onclick="toggleRaci('C')">C</div>
+          <div class="raci-check active-I" id="chk-I" onclick="toggleRaci('I')">I</div>
+        </div>
+      </div>
+      <div class="filter-group" style="min-width:220px;">
+        <div class="filter-label">Search Activities</div>
+        <input type="text" id="role-search" placeholder="Filter by keyword…" oninput="renderRoleMode()">
+      </div>
+    </div>
+    <div id="role-results"></div>
+  </div>
+
+  <!-- ═══════════════════ BY PHASE MODE ═══════════════════ -->
+  <div id="mode-phase" style="display:none;">
+    <div class="filter-bar">
+      <div class="filter-group" style="min-width:220px;">
+        <div class="filter-label">Segment (optional)</div>
+        <select id="phase-seg-filter" onchange="renderPhaseMode()">
+          <option value="">All Segments</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:220px;">
+        <div class="filter-label">Search Activities</div>
+        <input type="text" id="phase-search" placeholder="Filter by keyword…" oninput="renderPhaseMode()">
+      </div>
+    </div>
+    <div class="phase-pills" id="phase-pills"></div>
+    <div id="phase-results"></div>
+  </div>
+
+  <!-- ═══════════════════ BY SEGMENT MODE ═══════════════════ -->
+  <div id="mode-segment" style="display:none;">
+    <div class="filter-bar">
+      <div class="filter-group" style="min-width:180px;">
+        <div class="filter-label">Phase (optional)</div>
+        <select id="seg-phase-filter" onchange="renderSegmentMode()">
+          <option value="">All Phases</option>
+          <option>DISCOVER</option>
+          <option>SELECT</option>
+          <option>ADOPT</option>
+          <option>DERIVE</option>
+          <option>EXTEND</option>
+          <option>PORTFOLIO</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:220px;">
+        <div class="filter-label">Search Activities</div>
+        <input type="text" id="seg-search" placeholder="Filter by keyword…" oninput="renderSegmentMode()">
+      </div>
+    </div>
+    <div class="seg-pills" id="seg-pills"></div>
+    <div id="seg-results"></div>
+  </div>
+
+</div>
+
+<div class="footer">CVJ RACI Interactive Explorer &nbsp;·&nbsp; SAP Internal &nbsp;·&nbsp; Built with Claude Code &nbsp;·&nbsp; Data as of October 2026</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// RACI DATA — all 7 segments embedded
+// Each record: { segment, segKey, phase, activity, role, roleKey, raci }
+// ═══════════════════════════════════════════════════════════════
+
+const SEGMENTS = {
+  'AI':        'Artificial Intelligence Engagement Scenario',
+  'BTP':       'BTP Future Ready Enterprise (FRE)',
+  'C2C':       'Commit to Consume',
+  'Corporate': 'Corporate Engagement Model',
+  'Partner':   'Partner-Driven Engagement Model',
+  'EntStd':    'Enterprise Standard Scenario',
+  'EntRISE':   'Enterprise RISE PCE'
+};
+
+const PHASES = ['DISCOVER','SELECT','ADOPT','DERIVE','EXTEND','PORTFOLIO'];
+
+// Role lookup tables per segment
+const ROLE_NAMES = {
+  'AI': {
+    'MP/AE':'Managing Partner / Account Executive','SSE':'Solution Sales Executive','SA':'Solution Advisor',
+    'IA':'Industry Advisor','VA':'Value Advisor','EA':'Enterprise Architect','AA':'Architecture Advisor',
+    'S-CSM':'Solution Customer Success Manager','CIS':'Customer Innovation Services',
+    'Consultant':'Consultant','TQM':'Technical Quality Manager','RICOE':'Regional Implementation Group / AI COE'
+  },
+  'BTP': {
+    'MP':'Managing Partner','AE':'Account Executive','SSE':'Solution Sales Executive','SA':'Solution Advisor',
+    'IA':'Industry Advisor','VA':'Value Advisor','AA':'Architecture Advisor',
+    'CAA':'Cloud Architect & Advisor','EA':'Enterprise Architect',
+    'S-CSM':'Solution Customer Success Manager','BTP-CSM':'BTP Solution Customer Success Manager'
+  },
+  'C2C': {
+    'MP/AE':'Managing Partner / Account Executive','AA':'Architecture Advisor','VA':'Value Advisor',
+    'SSE':'Solution Sales Executive','EA':'Enterprise Architect','CDM':'Client Delivery Manager',
+    'ASM':'Applications Services Manager','PL':'GCO Project Lead','FBS':'Field Business Services',
+    'CCOE':'Consumption COE','OA':'Onboarding Advisor','CRE':'Customer Renewal Executive',
+    'C2C':'C2C Taskforce (Controlling)'
+  },
+  'Corporate': {
+    'AE-F':'Account Executive (Field)','AE-D':'Account Executive (Digital)','SSE':'Solution Sales Executive',
+    'SSMS':'Strategic Scale Motions Specialist','GFSE':'Grow Fast Sales Expert','SA':'Solution Advisor',
+    'DSA':'Digital Solution Advisor','IA':'Industry Advisor','VA':'Value Advisor',
+    'DVA':'Digital Value Advisor','DAA':'Digital Architect Advisor','CAA-RISE':'Cloud Architect Advisor (RISE)',
+    'CSM':'Customer Success Manager','D-EA':'Digital Enterprise Architect',
+    'CRE':'Customer Renewal Executive','DA':'Data Architect','PM':'Seller Partner Manager',
+    'PDM':'Partner Delivery Manager','SDE':'Sales Development Executive','Partner':'Roles at Partner'
+  },
+  'Partner': {
+    'Sales Exec':'Sales Executive (Partner)','Presales':'Presales Consultant (Partner)',
+    'Cloud Arch':'Cloud Architect (Partner)','Ent Arch':'Enterprise Architect (Partner)',
+    'Part CSM':'Partner Customer Success Manager','Part PM':'Project Manager (Partner)',
+    'Bus Dev Rep':'Business Development Representative (Partner)',
+    'Seller PM':'Seller Partner Manager (SAP)','Eco Mgr':'Ecosystem Development Manager (SAP)',
+    'Eco Manager':'Ecosystem Development Manager (SAP)',
+    'IA':'Industry Advisor (SAP)','SA':'Solution Advisor (SAP)','DSA':'Digital Solution Advisor (SAP)',
+    'Digital SA':'Digital Solution Advisor (SAP)','Digital VA':'Digital Value Advisor (SAP)',
+    'Digital DA':'Digital Architect Advisor (SAP)'
+  },
+  'EntStd': {
+    'MP':'Managing Partner','AE-E':'Account Executive - Enterprise','SSE':'Solution Sales Executive',
+    'GSI':'Global Strategic Initiatives Specialist','SA':'Solution Advisor','IA':'Industry Advisor',
+    'VA':'Value Advisor','AA':'Architecture Advisor','OA':'Onboarding Advisor',
+    'SCSM':'Solution Customer Success Manager','CRE':'Customer Renewal Executive',
+    'DA':'Data Architect','SAE':'Services Account Executive','SS':'Services Solutions',
+    'SPM':'Services Partner Manager','PM':'Seller Partner Manager','PDM':'Partner Delivery Manager',
+    'SE':'Success Expert','SPMan':'Success Plan Manager','TQM':'Technical Quality Manager'
+  },
+  'EntRISE': {
+    'MP':'Managing Partner','AE-E':'Account Executive - Enterprise','SSE':'Solution Sales Executive',
+    'GSI':'Global Strategic Initiatives Specialist','SA':'Solution Advisor','IA':'Industry Advisor',
+    'VA':'Value Advisor','AA':'Architecture Advisor','EA':'Enterprise Architect',
+    'EA-RISE':'Enterprise Architect - RISE','OA':'Onboarding Advisor',
+    'CRE':'Customer Renewal Executive','DA':'Data Architect','PM':'Seller Partner Manager',
+    'CDM':'Cloud Delivery Manager / GCO','TSM':'Technical Service Manager',
+    'EAE':'Enterprise Adoption Expert (RISE Premium)','dCEM':'Digital Customer Engagement Manager'
+  }
+};
+
+// ─── RAW RACI DATA ───────────────────────────────────────────────────────────
+const RACI_RAW = [
+
+// ══════════════════════════════ AI SEGMENT ══════════════════════════════
+{seg:'AI',phase:'DISCOVER',activity:'Generate High-level interest for embedded and custom AI use cases',assignments:[['MP/AE','A'],['SSE','R'],['IA','R'],['AA','C'],['S-CSM','R']]},
+
+{seg:'AI',phase:'SELECT',activity:'Initiate and orchestrate AI Discover Workshop (AIDW)',assignments:[['MP/AE','A'],['SSE','R'],['SA','R'],['IA','R'],['VA','C'],['EA','R'],['AA','R'],['S-CSM','C'],['TQM','R'],['RICOE','R']]},
+{seg:'AI',phase:'SELECT',activity:'Showcase value of Business AI and demo AI use cases',assignments:[['MP/AE','C'],['SSE','C'],['SA','R'],['IA','C'],['VA','A'],['AA','C'],['S-CSM','I']]},
+{seg:'AI',phase:'SELECT',activity:'Document workshop outcomes to decide AI scope and business goals',assignments:[['MP/AE','C'],['SSE','R'],['SA','A/R'],['IA','C'],['AA','C'],['S-CSM','R'],['TQM','C']]},
+{seg:'AI',phase:'SELECT',activity:'Create AI adoption plan (with pre-close info)',assignments:[['MP/AE','A/R'],['SSE','R'],['SA','C'],['EA','C'],['AA','C'],['S-CSM','C']]},
+{seg:'AI',phase:'SELECT',activity:'Review AI entitlements & align on commercials/contracts for AI',assignments:[['MP/AE','A/R'],['SSE','R'],['SA','C'],['AA','C']]},
+{seg:'AI',phase:'SELECT',activity:'Sales2Success transition for AI with artifacts',assignments:[['MP/AE','A/R'],['SSE','R'],['SA','R'],['VA','C'],['EA','R'],['AA','C'],['S-CSM','R'],['TQM','C']]},
+
+{seg:'AI',phase:'ADOPT',activity:'Validate E2E AI scoping and business outcomes for design and delivery',assignments:[['MP/AE','C'],['SSE','C'],['SA','C'],['IA','C'],['EA','R'],['AA','A'],['TQM','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Create/Update AI project plan in HPI',assignments:[['AA','A/R']]},
+{seg:'AI',phase:'ADOPT',activity:'Create and Refine AI Adoption Plan',assignments:[['EA','R'],['AA','A/R'],['RICOE','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Embed AI strategy into Enterprise Architecture',assignments:[['EA','A/R'],['AA','C'],['TQM','C'],['RICOE','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Review AI unit entitlement and ensure technical pre-requisites for use case activation',assignments:[['EA','A/R'],['S-CSM','R'],['CIS','R'],['TQM','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Engage and activate Joule and AI use cases',assignments:[['EA','I'],['AA','A'],['CIS','R'],['TQM','C'],['RICOE','R']]},
+{seg:'AI',phase:'ADOPT',activity:'Enable stakeholders on Embedded AI scenarios',assignments:[['EA','C'],['AA','A/R'],['CIS','R'],['RICOE','R']]},
+{seg:'AI',phase:'ADOPT',activity:'Ensure custom AI directed to SAP Customer Innovation Services',assignments:[['EA','R'],['AA','A']]},
+{seg:'AI',phase:'ADOPT',activity:'Create and share Engagement Plan for identified custom AI',assignments:[['AA','A'],['S-CSM','R'],['TQM','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Create/Update AI customer project and service plan in HEP',assignments:[['TQM','A/R']]},
+{seg:'AI',phase:'ADOPT',activity:'Use SAP Premium Engagement AI Services to support all phases of AI journey',assignments:[['EA','C'],['AA','C'],['TQM','A/R']]},
+{seg:'AI',phase:'ADOPT',activity:'Lead E2E scoping, design and delivery of custom AI',assignments:[['AA','A'],['S-CSM','R']]},
+{seg:'AI',phase:'ADOPT',activity:'Validate and track activation completion',assignments:[['EA','R'],['AA','A/R']]},
+{seg:'AI',phase:'ADOPT',activity:'Mitigate AI adoption risks',assignments:[['EA','R'],['AA','A/R'],['CIS','R'],['TQM','R']]},
+{seg:'AI',phase:'ADOPT',activity:'Collaborate with RIG / Product teams / CIS for Early Adopter Care',assignments:[['EA','R'],['AA','A/R'],['TQM','R'],['RICOE','R']]},
+{seg:'AI',phase:'ADOPT',activity:'Create AI success plan and build Business AI Roadmap',assignments:[['EA','R'],['AA','A/R'],['TQM','C'],['RICOE','C']]},
+{seg:'AI',phase:'ADOPT',activity:'Ensure AI updates included in Quarterly Business Reviews (QBR)',assignments:[['MP/AE','A'],['EA','R'],['AA','A/R'],['TQM','R']]},
+
+{seg:'AI',phase:'DERIVE',activity:'Drive E2E adoption & consumption of AI use cases and Joule',assignments:[['IA','C'],['EA','R'],['S-CSM','A/R'],['TQM','R'],['RICOE','R']]},
+{seg:'AI',phase:'DERIVE',activity:'Evangelize and initiate to become an AI reference customer',assignments:[['MP/AE','R'],['IA','C'],['EA','R'],['S-CSM','A/R']]},
+{seg:'AI',phase:'DERIVE',activity:'Manage release review for AI units',assignments:[['S-CSM','A/R']]},
+{seg:'AI',phase:'DERIVE',activity:'Monitor Business AI goals and outcomes',assignments:[['EA','R'],['S-CSM','A/R'],['CIS','R'],['TQM','C']]},
+
+{seg:'AI',phase:'EXTEND',activity:'Identify and nurture AI opportunities',assignments:[['MP/AE','A'],['SSE','R'],['IA','C'],['EA','R'],['AA','R'],['S-CSM','R'],['TQM','R']]},
+{seg:'AI',phase:'EXTEND',activity:'Evolve business AI strategy for growth',assignments:[['MP/AE','C'],['SSE','C'],['IA','C'],['EA','R'],['AA','R'],['S-CSM','A/R']]},
+{seg:'AI',phase:'EXTEND',activity:'Extend Business Roadmap',assignments:[['MP/AE','C'],['SSE','C'],['EA','R'],['AA','R'],['S-CSM','A/R'],['TQM','C'],['RICOE','R']]},
+
+// ══════════════════════════════ BTP SEGMENT ══════════════════════════════
+{seg:'BTP',phase:'SELECT',activity:'Showcase BTP as technology foundation to extend, integrate and innovate',assignments:[['MP','A'],['AE','A'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['AA','R'],['CAA','R'],['S-CSM','C'],['BTP-CSM','C']]},
+{seg:'BTP',phase:'SELECT',activity:"Define BTP's role in enterprise architecture & strategy",assignments:[['MP','C'],['AE','C'],['SSE','A'],['SA','R'],['IA','C'],['VA','C'],['AA','R'],['CAA','I'],['EA','C'],['S-CSM','C'],['BTP-CSM','C']]},
+{seg:'BTP',phase:'SELECT',activity:'Create plan for implementing suite qualities and identify initial BTP use cases',assignments:[['MP','C'],['AE','C'],['SSE','A/R'],['SA','R'],['IA','C'],['VA','C'],['AA','R'],['EA','C'],['S-CSM','C'],['BTP-CSM','C']]},
+{seg:'BTP',phase:'SELECT',activity:'Ensure BTP use cases included in project scope',assignments:[['MP','C'],['AE','C'],['SSE','A/R'],['SA','R'],['IA','C'],['VA','C'],['AA','C'],['EA','C'],['S-CSM','C'],['BTP-CSM','C']]},
+
+{seg:'BTP',phase:'ADOPT',activity:'Establish BTP Global Account structure and landscape strategy',assignments:[['MP','C'],['AE','C'],['SSE','C'],['EA','C'],['S-CSM','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'ADOPT',activity:'Establish supporting BTP technical architecture',assignments:[['SSE','C'],['CAA','C'],['EA','R'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'ADOPT',activity:'Establish and execute BTP platform adoption plan and create BTP capability strategy',assignments:[['MP','I'],['AE','I'],['SSE','C'],['EA','C'],['S-CSM','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'ADOPT',activity:'Define initial BTP standards and guides',assignments:[['EA','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'ADOPT',activity:'Enable BTP Acceleration Packs',assignments:[['EA','C'],['S-CSM','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'ADOPT',activity:'Go-live of initial BTP Use Cases',assignments:[['MP','I'],['AE','I'],['SSE','C'],['EA','C'],['S-CSM','R'],['BTP-CSM','A/R']]},
+
+{seg:'BTP',phase:'DERIVE',activity:'BTP Cloud Ops Roles and Responsibilities',assignments:[['EA','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'DERIVE',activity:'Establish BTP Software Logistics Strategy',assignments:[['EA','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'DERIVE',activity:'Introduce BTP CoE strategy',assignments:[['EA','C'],['S-CSM','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'DERIVE',activity:'Review and update BTP adoption plan to continue to deepen domain maturity',assignments:[['EA','C'],['S-CSM','C'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'DERIVE',activity:'Evolve initial technical POV for expanded opportunities by incorporating BTP into enterprise-wide architecture',assignments:[['MP','C'],['AE','C'],['SSE','C'],['EA','R'],['S-CSM','R'],['BTP-CSM','A/R']]},
+
+{seg:'BTP',phase:'EXTEND',activity:'Establish BTP as platform to deliver future innovation and change (through BTP COE)',assignments:[['MP','C'],['AE','C'],['SSE','R'],['EA','C'],['S-CSM','R'],['BTP-CSM','A/R']]},
+{seg:'BTP',phase:'EXTEND',activity:'Rationalise and standardise third party architecture on BTP (TCO/ROI view)',assignments:[['MP','C'],['AE','A'],['SSE','R'],['AA','R'],['EA','R'],['BTP-CSM','R']]},
+
+// ══════════════════════════════ C2C SEGMENT ══════════════════════════════
+{seg:'C2C',phase:'SELECT',activity:'Adoption Plan (with pre-close info) - prior to quote approval (C2C)',assignments:[['MP/AE','A/R'],['AA','R'],['VA','R'],['SSE','R'],['EA','R']]},
+
+{seg:'C2C',phase:'ADOPT',activity:'C2C onboarding (internal) - Sales2Delivery transition and provisioning initiation',assignments:[['EA','R'],['CDM','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'C2C Onboarding (Internal process)',assignments:[['MP/AE','A/R'],['EA','C'],['CDM','R'],['ASM','R'],['FBS','I'],['CCOE','I'],['OA','I'],['C2C','I']]},
+{seg:'C2C',phase:'ADOPT',activity:'C2C Onboarding (External-Customer)',assignments:[['MP/AE','R'],['EA','R'],['CDM','C'],['ASM','R'],['OA','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Setup C2C Governance Model',assignments:[['MP/AE','A/R'],['EA','C'],['CDM','I'],['ASM','C'],['C2C','C']]},
+{seg:'C2C',phase:'ADOPT',activity:'C2C Forecast Tools & Process Enablement',assignments:[['C2C','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Changes to C2C Innovation Adoption',assignments:[['MP/AE','C'],['EA','A/R'],['CDM','C'],['ASM','C'],['FBS','C'],['C2C','I']]},
+{seg:'C2C',phase:'ADOPT',activity:'Fund Consumption for C2C',assignments:[['MP/AE','A/R'],['CDM','R'],['FBS','C']]},
+{seg:'C2C',phase:'ADOPT',activity:'Changes to Technical Architecture, System Deployment Planning and Pricing',assignments:[['MP/AE','A/R'],['AA','R'],['EA','I'],['CDM','R'],['C2C','I']]},
+{seg:'C2C',phase:'ADOPT',activity:'Creating Service Change Form (Handling Process Check-in/check-out)',assignments:[['AA','R'],['EA','C'],['CDM','R'],['ASM','C'],['PL','R'],['FBS','I'],['CCOE','A'],['C2C','I']]},
+{seg:'C2C',phase:'ADOPT',activity:'Daily change management & management of change requests & technical change plans',assignments:[['MP/AE','A/R'],['CDM','R'],['ASM','R'],['PL','R'],['FBS','R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Consumption Plan Ownership for C2C',assignments:[['MP/AE','A/R'],['EA','C'],['CDM','R'],['ASM','R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Consumption Forecast Data Maintenance in FUSION for C2C',assignments:[['MP/AE','R'],['EA','C'],['CDM','C'],['ASM','R'],['FBS','C'],['CCOE','C'],['C2C','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Assess customer readiness for C2C',assignments:[['MP/AE','C'],['EA','A'],['CDM','R'],['ASM','C'],['PL','R'],['OA','C']]},
+{seg:'C2C',phase:'ADOPT',activity:'Update Adoption plan for C2C in alignment with Partner if any',assignments:[['MP/AE','C'],['AA','C'],['EA','A'],['CDM','R'],['ASM','C'],['PL','R'],['OA','C']]},
+{seg:'C2C',phase:'ADOPT',activity:'Generate and provide Balance Statement Data Preview (C2C manual only)',assignments:[['FBS','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Balance Statement Data Validation (C2C manual only)',assignments:[['MP/AE','A/R'],['CDM','A/R'],['ASM','R'],['FBS','C']]},
+{seg:'C2C',phase:'ADOPT',activity:'Review of Balance Statements & Invoices for C2C (Internal)',assignments:[['MP/AE','R'],['EA','I'],['CDM','I'],['ASM','R'],['PL','R'],['FBS','R'],['C2C','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Review of Balance Statements & Invoices for C2C (External)',assignments:[['MP/AE','A/R'],['CDM','R'],['ASM','R'],['FBS','R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Fund Monitoring for C2C',assignments:[['MP/AE','R'],['EA','I'],['CDM','R'],['ASM','R'],['C2C','A/R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Preparation and Reporting Forecasting for C2C',assignments:[['MP/AE','A'],['EA','I'],['CDM','C'],['ASM','R'],['PL','I'],['C2C','R']]},
+{seg:'C2C',phase:'ADOPT',activity:'Identify and mitigate adoption risks for C2C',assignments:[['MP/AE','R'],['EA','A/R'],['CDM','R'],['ASM','C'],['OA','C']]},
+
+{seg:'C2C',phase:'DERIVE',activity:'Monitor software subscription consumption & foundational usage for C2C',assignments:[['MP/AE','A/R'],['EA','R'],['CDM','C'],['ASM','C'],['PL','C']]},
+
+{seg:'C2C',phase:'EXTEND',activity:'Preparation of Potential Churn Assessment for C2C',assignments:[['MP/AE','R'],['EA','I'],['CDM','C'],['ASM','C'],['FBS','C'],['OA','A'],['CRE','R']]},
+
+// ══════════════════════════════ CORPORATE SEGMENT ══════════════════════════════
+{seg:'Corporate',phase:'DISCOVER',activity:'Develop a Point of View (PoV)',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['GFSE','R'],['SA','C'],['DSA','C'],['IA','R'],['VA','R'],['DVA','R'],['CRE','C'],['DA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DISCOVER',activity:'Align with Partner on joint PoV',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['GFSE','R'],['SA','C'],['IA','R'],['VA','R'],['DVA','R'],['DA','C'],['CRE','C'],['PM','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DISCOVER',activity:'Lock-in Sponsorship',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['GFSE','R'],['SA','C'],['DSA','C'],['VA','C'],['DA','C'],['CRE','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DISCOVER',activity:'Position Customer Value Journey',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['GFSE','C'],['DSA','C'],['VA','C'],['DA','C'],['PM','C'],['PDM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DISCOVER',activity:'Allocate Resources',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['GFSE','C'],['DSA','R'],['VA','C'],['DA','C'],['CRE','C'],['PM','I'],['PDM','I'],['Partner','A/R']]},
+
+{seg:'Corporate',phase:'SELECT',activity:'Benchmarking & Value Analysis',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','C'],['SA','C'],['IA','C'],['VA','R'],['DVA','R'],['CAA-RISE','I'],['CSM','C'],['DA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Experience Discovery',assignments:[['AE-F','A'],['AE-D','A'],['SSE','R'],['GFSE','C'],['IA','R'],['VA','R'],['DVA','R'],['CSM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Interviews - Issues, Pains, Challenges Analysis',assignments:[['AE-F','A'],['AE-D','A'],['SSE','R'],['GFSE','C'],['IA','R'],['VA','R'],['DVA','R'],['CAA-RISE','R'],['CSM','C'],['DA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Business Capability Gap Analysis',assignments:[['AE-F','A'],['AE-D','C'],['SSE','A'],['IA','C'],['VA','R'],['DVA','R'],['DAA','R'],['DA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Business Process Intelligence',assignments:[['AE-F','A'],['AE-D','C'],['SSE','A'],['IA','C'],['VA','R'],['DVA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Data driven Value / TCO Analysis',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['IA','C'],['VA','C'],['DVA','R'],['DAA','C'],['DA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Business Case Draft',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['IA','C'],['VA','C'],['DVA','R'],['DAA','C'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Customer Reference visit',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['GFSE','R'],['IA','C'],['SA','C'],['VA','C'],['DA','C'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Roadmap',assignments:[['AE-F','A'],['AE-D','A'],['SSE','R'],['SSMS','C'],['IA','C'],['DSA','C'],['VA','R'],['CRE','R'],['DA','R'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Phasing Strategy',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','A/R'],['SSMS','C'],['DSA','C'],['IA','C'],['VA','I'],['DA','R'],['CSM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Adoption Plan (Pre-Close Info)',assignments:[['AE-F','A'],['AE-D','A'],['SSE','R'],['IA','C'],['VA','C'],['CSM','R'],['DA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Commercials',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['IA','C'],['DA','I'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Provisioning Plan',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['IA','C'],['DA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'SELECT',activity:'Transition Deal',assignments:[['AE-F','A/R'],['AE-D','A/R'],['SSE','R'],['SSMS','C'],['GFSE','R'],['IA','C'],['VA','I'],['DA','R'],['CSM','R'],['Partner','A/R']]},
+
+{seg:'Corporate',phase:'ADOPT',activity:'Confirm Customer Expectations, Business Goals & Value Drivers',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['IA','C'],['VA','C'],['DVA','C'],['CSM','R'],['D-EA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Define value scorecard',assignments:[['AE-F','A'],['AE-D','A/R'],['SSE','R'],['IA','C'],['VA','C'],['DVA','R'],['CSM','R'],['D-EA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Establish account governance structure with right stakeholders',assignments:[['AE-F','A/R'],['AE-D','C'],['SSE','R'],['CSM','R'],['D-EA','I'],['SA','C'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Create ROI Success Plan',assignments:[['AE-F','A/R'],['AE-D','C'],['SSE','C'],['CSM','R'],['D-EA','R'],['SA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Monitor and update implementation and project milestones',assignments:[['AE-F','A'],['AE-D','I'],['SSE','C'],['CSM','R'],['D-EA','C'],['PM','C'],['PDM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Deliver Deployment Services (where applicable)',assignments:[['AE-F','A'],['AE-D','C'],['CSM','R'],['D-EA','R'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Identify and mitigate adoption risks',assignments:[['AE-F','A'],['AE-D','I'],['SSE','C'],['CSM','R'],['D-EA','R'],['PM','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'ADOPT',activity:'Measure initial impact on goals, KPIs and value drivers',assignments:[['AE-F','A'],['AE-D','I'],['VA','A'],['CSM','R'],['D-EA','C'],['SA','C'],['PM','R'],['Partner','A/R']]},
+
+{seg:'Corporate',phase:'DERIVE',activity:'Business Review Cadence & Readout',assignments:[['AE-F','A'],['AE-D','R'],['CSM','R'],['D-EA','I'],['SA','C'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DERIVE',activity:'Assess customer relationship and desired outcomes',assignments:[['AE-F','A'],['AE-D','R'],['CSM','R'],['SA','C'],['PM','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DERIVE',activity:'Analyze value scorecard against goals, value drivers & KPIs',assignments:[['AE-F','A'],['AE-D','I'],['VA','A'],['CSM','R'],['D-EA','R'],['SA','C'],['PM','A'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DERIVE',activity:'Optimize - Deliver Success Offerings',assignments:[['AE-F','A'],['AE-D','I'],['SSE','C'],['CSM','R'],['D-EA','C'],['SA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'DERIVE',activity:'Monitor license consumption & foundational usage',assignments:[['AE-F','A'],['AE-D','I'],['VA','I'],['IA','C'],['CSM','R'],['D-EA','I'],['Partner','A/R']]},
+
+{seg:'Corporate',phase:'EXTEND',activity:'Surface Unrealized Value',assignments:[['AE-F','A'],['AE-D','R'],['IA','I'],['VA','C'],['DSA','C'],['CSM','R'],['D-EA','R'],['DA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'EXTEND',activity:'Amplify voice of customer',assignments:[['AE-F','A/R'],['AE-D','R'],['IA','I'],['DSA','C'],['CSM','R'],['D-EA','R'],['Partner','A/R']]},
+{seg:'Corporate',phase:'EXTEND',activity:'Cloud Renewal Execution',assignments:[['AE-F','A/R'],['AE-D','C'],['SSE','R'],['IA','I'],['CSM','R'],['D-EA','C'],['SA','C'],['Partner','A/R']]},
+{seg:'Corporate',phase:'EXTEND',activity:'Extend Customer Growth',assignments:[['AE-F','A/R'],['AE-D','C'],['SSE','R'],['GFSE','R'],['IA','C'],['DSA','C'],['CSM','R'],['D-EA','C'],['SA','C'],['PM','C'],['PDM','C'],['Partner','A/R']]},
+
+// ══════════════════════════════ PARTNER SEGMENT ══════════════════════════════
+{seg:'Partner',phase:'DISCOVER',activity:'Drive joint Partner-SAP business planning for revenue growth',assignments:[['Sales Exec','A/R'],['Bus Dev Rep','I'],['Seller PM','A/R'],['Part CSM','C'],['Eco Mgr','R']]},
+{seg:'Partner',phase:'DISCOVER',activity:"Ensure Partners' capability build for the Customer Value Journey",assignments:[['Sales Exec','A/R'],['Cloud Arch','R'],['Ent Arch','C'],['Seller PM','A'],['Part CSM','R'],['Eco Mgr','C']]},
+
+{seg:'Partner',phase:'SELECT',activity:'Develop a Point of View (PoV)',assignments:[['Sales Exec','A'],['Cloud Arch','R'],['Ent Arch','R'],['Seller PM','C'],['Part CSM','C'],['Digital SA','C'],['Digital VA','R']]},
+{seg:'Partner',phase:'SELECT',activity:'Lock-in Sponsorship',assignments:[['Cloud Arch','C'],['Part CSM','C'],['Eco Manager','C'],['Digital SA','C']]},
+{seg:'Partner',phase:'SELECT',activity:'Benchmarking & Value Analysis',assignments:[['Sales Exec','A'],['Cloud Arch','R'],['Ent Arch','I'],['SA','C'],['Seller PM','C'],['Part CSM','C'],['Digital SA','C'],['Digital VA','R']]},
+{seg:'Partner',phase:'SELECT',activity:'Business Capability Gap Analysis',assignments:[['Sales Exec','A'],['Cloud Arch','R'],['Ent Arch','R'],['Eco Manager','C'],['Digital SA','C'],['Digital VA','C']]},
+{seg:'Partner',phase:'SELECT',activity:'Data driven Value / TCO Analysis',assignments:[['Sales Exec','A'],['Cloud Arch','R'],['Ent Arch','C'],['Seller PM','C'],['Part CSM','C'],['Digital SA','R']]},
+{seg:'Partner',phase:'SELECT',activity:'Business Case Draft',assignments:[['Sales Exec','A'],['Cloud Arch','R'],['Ent Arch','C'],['Seller PM','C'],['Part CSM','C'],['Digital SA','R']]},
+{seg:'Partner',phase:'SELECT',activity:'Roadmap',assignments:[['Sales Exec','A/R'],['Cloud Arch','R'],['Ent Arch','R'],['SA','C'],['DSA','C'],['Seller PM','C'],['Part CSM','C'],['Eco Manager','C'],['Digital SA','C']]},
+{seg:'Partner',phase:'SELECT',activity:'Adoption Plan (Pre-Close Info)',assignments:[['Sales Exec','R'],['Part CSM','A'],['Ent Arch','R'],['SA','R'],['Eco Manager','I']]},
+{seg:'Partner',phase:'SELECT',activity:'Commercials',assignments:[['Sales Exec','A/R'],['Cloud Arch','C'],['Ent Arch','C'],['SA','C'],['Part CSM','C']]},
+{seg:'Partner',phase:'SELECT',activity:'Provisioning Plan',assignments:[['Part CSM','R'],['Sales Exec','A'],['Cloud Arch','C'],['Ent Arch','C'],['Eco Manager','C']]},
+{seg:'Partner',phase:'SELECT',activity:'Transition Deal',assignments:[['Part CSM','R'],['Sales Exec','A/R'],['Cloud Arch','R'],['Ent Arch','R'],['SA','R'],['Part CSM','C'],['Eco Manager','C']]},
+
+{seg:'Partner',phase:'ADOPT',activity:'Confirm Customer Expectations, Business Goals & Value Drivers',assignments:[['Part CSM','R'],['Sales Exec','C'],['Cloud Arch','R'],['Ent Arch','C'],['Part CSM','A/R'],['Digital SA','C']]},
+{seg:'Partner',phase:'ADOPT',activity:'Establish account governance structure with right stakeholders',assignments:[['Part CSM','R'],['Sales Exec','A/R'],['Ent Arch','R'],['Part CSM','C'],['IA','C']]},
+{seg:'Partner',phase:'ADOPT',activity:'Monitor and update implementation and project milestones',assignments:[['Part CSM','R'],['Sales Exec','C'],['SA','C'],['Part PM','A/R'],['Part CSM','C']]},
+{seg:'Partner',phase:'ADOPT',activity:'Deliver Deployment Services (where applicable)',assignments:[['Part CSM','R'],['Sales Exec','C'],['SA','R'],['Part PM','A/R'],['Part CSM','C']]},
+{seg:'Partner',phase:'ADOPT',activity:'Identify and mitigate adoption risks',assignments:[['Part CSM','R'],['Sales Exec','C'],['Ent Arch','R'],['SA','R'],['Part PM','A/R'],['Part CSM','C'],['IA','R']]},
+
+{seg:'Partner',phase:'DERIVE',activity:'Business Review Cadence & Readout',assignments:[['Part CSM','R'],['Sales Exec','A'],['Cloud Arch','C'],['SA','R'],['Part CSM','C'],['IA','I'],['Eco Mgr','C']]},
+{seg:'Partner',phase:'DERIVE',activity:'Optimize (Deliver Success Offerings)',assignments:[['Part CSM','R'],['Sales Exec','C'],['SA','R'],['Part CSM','A/R']]},
+{seg:'Partner',phase:'DERIVE',activity:'Monitor license consumption & foundational usage',assignments:[['Part CSM','R'],['Sales Exec','I'],['SA','C'],['Ent Arch','A/R'],['Part CSM','C']]},
+
+{seg:'Partner',phase:'EXTEND',activity:'Cloud Renewal Execution',assignments:[['Part CSM','R'],['Sales Exec','A/R'],['Ent Arch','R'],['Seller PM','C']]},
+{seg:'Partner',phase:'EXTEND',activity:'Extend Customer Growth',assignments:[['Sales Exec','I'],['Part PM','A/R'],['SA','C'],['Part CSM','C'],['IA','I']]},
+
+// ══════════════════════════════ ENTERPRISE STANDARD SEGMENT ══════════════════════════════
+{seg:'EntStd',phase:'DISCOVER',activity:'Develop a Point of View (PoV)',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['GFSE','R'],['IA','R'],['VA','R'],['AA','R'],['OA','R'],['CRE','R'],['CSM','C']]},
+{seg:'EntStd',phase:'DISCOVER',activity:'Align with Partner on joint PoV',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['AA','R'],['PM','R']]},
+{seg:'EntStd',phase:'DISCOVER',activity:'Lock-in Sponsorship',assignments:[['MP','A/R'],['AE-E','A/R'],['SSE','R'],['SA','C'],['VA','C'],['CRE','C']]},
+{seg:'EntStd',phase:'DISCOVER',activity:'Position Customer Value Journey',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['SA','C'],['VA','C'],['CRE','C'],['PM','C'],['PDM','C']]},
+
+{seg:'EntStd',phase:'SELECT',activity:'Benchmarking & Value Analysis',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['SA','C'],['IA','R'],['VA','I'],['CRE','I'],['SAE','C'],['SS','C'],['DA','R'],['PM','I']]},
+{seg:'EntStd',phase:'SELECT',activity:'Business Capability Gap Analysis',assignments:[['MP','C'],['AE-E','C'],['SSE','A'],['GSI','I'],['SA','R'],['IA','C'],['VA','R'],['AA','R'],['CRE','C'],['DA','R']]},
+{seg:'EntStd',phase:'SELECT',activity:'Data driven Value / TCO Analysis',assignments:[['MP','C'],['AE-E','A'],['SSE','R'],['GSI','R'],['SA','C'],['IA','C'],['VA','R'],['AA','C'],['CRE','C'],['DA','R']]},
+{seg:'EntStd',phase:'SELECT',activity:'Business Case Draft',assignments:[['MP','C'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','C'],['VA','R'],['AA','R'],['CRE','C'],['DA','R'],['PM','C']]},
+{seg:'EntStd',phase:'SELECT',activity:'Roadmap',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','C'],['DSA','C'],['VA','R'],['CRE','R'],['DA','R'],['PM','C']]},
+{seg:'EntStd',phase:'SELECT',activity:'Adoption Plan (Pre-Close Info)',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['VA','I'],['CRE','R'],['DA','R']]},
+{seg:'EntStd',phase:'SELECT',activity:'Commercials',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['GSI','R'],['VA','I'],['CRE','R'],['DA','C'],['PM','C']]},
+{seg:'EntStd',phase:'SELECT',activity:'Provisioning Plan',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','I'],['CRE','I'],['SPM','C'],['PDM','C']]},
+{seg:'EntStd',phase:'SELECT',activity:'Transition Deal',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['CRE','R']]},
+
+{seg:'EntStd',phase:'ADOPT',activity:'Confirm Customer Expectations, Business Goals & Value Drivers',assignments:[['MP','C'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['AA','C'],['CRE','R'],['DA','R'],['PM','I']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Establish account governance structure',assignments:[['MP','A/R'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','C'],['CRE','R'],['DA','R'],['PM','C']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Create ROI Success Plan',assignments:[['MP','C'],['AE-E','A/R'],['SA','C'],['IA','I'],['CRE','R'],['DA','R'],['PM','C']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Ensure Provisioning - Confirm Customer Onboard',assignments:[['MP','I'],['AE-E','A'],['SSE','I'],['SCSM','R'],['CRE','R'],['DA','I']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Assess customer readiness',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['IA','I'],['SCSM','R'],['CRE','R'],['DA','R']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Revise Adoption Plan from SELECT phase',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['IA','C'],['SCSM','R'],['CRE','R'],['DA','R']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Monitor and update implementation and project milestones',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['SCSM','R'],['CRE','R'],['PM','C'],['PDM','C']]},
+{seg:'EntStd',phase:'ADOPT',activity:'Identify and mitigate adoption risks',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['IA','R'],['SCSM','R'],['CRE','R'],['PM','R']]},
+
+{seg:'EntStd',phase:'DERIVE',activity:'Business Review Cadence & Readout',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['VA','C'],['SCSM','R'],['DA','I'],['PM','C']]},
+{seg:'EntStd',phase:'DERIVE',activity:'Analyze value scorecard against goals, value drivers & KPIs',assignments:[['MP','C'],['AE-E','C'],['SSE','A'],['IA','C'],['VA','R'],['SCSM','R'],['DA','I']]},
+{seg:'EntStd',phase:'DERIVE',activity:'Monitor release adoption',assignments:[['MP','I'],['AE-E','A'],['SSE','I'],['IA','C'],['SCSM','R'],['DA','I'],['CRE','C']]},
+{seg:'EntStd',phase:'DERIVE',activity:'Surface Unrealized Value',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['IA','I'],['VA','C'],['SCSM','R'],['CRE','R'],['DA','C']]},
+{seg:'EntStd',phase:'DERIVE',activity:'Cloud Renewal Execution',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','I'],['SCSM','R'],['DA','C'],['PM','I']]},
+
+{seg:'EntStd',phase:'EXTEND',activity:'Extend Customer Growth',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['SCSM','R'],['DA','R'],['PM','C']]},
+{seg:'EntStd',phase:'EXTEND',activity:'Update Roadmap',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','C'],['VA','C'],['SCSM','R'],['DA','C'],['PM','C']]},
+
+// ══════════════════════════════ ENTERPRISE RISE PCE SEGMENT ══════════════════════════════
+{seg:'EntRISE',phase:'DISCOVER',activity:'Develop a Point of View (PoV)',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['GSI','R'],['SA','C'],['IA','R'],['VA','R'],['AA','R'],['EA','R'],['OA','R'],['CRE','R'],['PM','C']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Align with Partner on joint PoV',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['AA','R'],['EA','R']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Lock-in Sponsorship',assignments:[['MP','A/R'],['AE-E','A/R'],['SSE','R'],['SA','C'],['VA','C'],['CRE','C']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Benchmarking & Value Analysis',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['GSI','C'],['IA','R'],['VA','R'],['AA','R'],['EA','R'],['CRE','R'],['DA','C']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Business Capability Gap Analysis',assignments:[['MP','C'],['AE-E','C'],['SSE','A'],['GSI','C'],['IA','R'],['VA','R'],['AA','R'],['EA','R'],['DA','C']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Data driven Value / TCO Analysis',assignments:[['MP','C'],['AE-E','A'],['SSE','R'],['GSI','A/R'],['SA','C'],['IA','R'],['VA','C'],['EA','R'],['DA','C'],['PM','R']]},
+{seg:'EntRISE',phase:'DISCOVER',activity:'Business Case Draft',assignments:[['MP','C'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','C'],['VA','R'],['EA','R'],['CRE','C'],['DA','C'],['PM','C']]},
+
+{seg:'EntRISE',phase:'SELECT',activity:'SAP Cloud ERP Framework',assignments:[['MP','C'],['AE-E','A'],['SSE','C'],['IA','I'],['EA','R'],['AA','R'],['EA-RISE','R']]},
+{seg:'EntRISE',phase:'SELECT',activity:'Phasing Strategy',assignments:[['MP','C'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','C'],['VA','R'],['EA','R'],['EA-RISE','R'],['CRE','R']]},
+{seg:'EntRISE',phase:'SELECT',activity:'Adoption Plan (Pre-Close Info)',assignments:[['MP','A/R'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['EA','R'],['EA-RISE','R'],['CRE','R']]},
+{seg:'EntRISE',phase:'SELECT',activity:'Commercials',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['GSI','R'],['SA','R'],['IA','C'],['CRE','R'],['DA','R'],['PM','C']]},
+{seg:'EntRISE',phase:'SELECT',activity:'Provisioning Plan',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['IA','C'],['VA','I'],['CRE','R'],['PM','C']]},
+
+{seg:'EntRISE',phase:'ADOPT',activity:'Confirm Customer Expectations, Business Goals & Value Drivers',assignments:[['MP','C'],['AE-E','C'],['SSE','R'],['GSI','C'],['IA','R'],['VA','R'],['AA','R'],['EA','R'],['CRE','R'],['DA','R']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Establish account governance structure',assignments:[['MP','A/R'],['AE-E','A/R'],['SSE','R'],['SA','C'],['CRE','R'],['DA','R']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Ensure Provisioning - Confirm Customer Onboard',assignments:[['MP','I'],['AE-E','A'],['SSE','I'],['EA-RISE','R'],['CRE','R'],['DA','I']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Assess customer readiness',assignments:[['MP','C'],['AE-E','C'],['SSE','C'],['IA','I'],['EA','A/R'],['CRE','R'],['DA','R']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Revise Adoption Plan from SELECT phase',assignments:[['MP','C'],['AE-E','C'],['SSE','C'],['IA','C'],['EA','A/R'],['CRE','R'],['DA','R']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Monitor and update implementation and project milestones',assignments:[['MP','C'],['AE-E','C'],['SSE','C'],['EA','A/R'],['CRE','R'],['DA','R']]},
+{seg:'EntRISE',phase:'ADOPT',activity:'Identify and mitigate adoption risks',assignments:[['MP','C'],['AE-E','C'],['SSE','C'],['IA','R'],['EA','A/R'],['CRE','R'],['DA','R']]},
+
+{seg:'EntRISE',phase:'DERIVE',activity:'Business Review Cadence & Readout',assignments:[['MP','A'],['AE-E','A'],['SSE','R'],['SA','C'],['VA','C'],['EA','R'],['CRE','R'],['DA','C']]},
+{seg:'EntRISE',phase:'DERIVE',activity:'Analyze value scorecard against goals',assignments:[['MP','C'],['AE-E','C'],['SSE','R'],['SA','C'],['VA','R'],['EA','A'],['CRE','R'],['DA','I']]},
+{seg:'EntRISE',phase:'DERIVE',activity:'Monitor release adoption',assignments:[['MP','I'],['AE-E','I'],['SSE','I'],['IA','C'],['EA','A/R'],['CRE','R'],['DA','C']]},
+{seg:'EntRISE',phase:'DERIVE',activity:'Surface Unrealized Value',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['IA','C'],['VA','R'],['EA','R'],['CRE','R'],['DA','C']]},
+
+{seg:'EntRISE',phase:'EXTEND',activity:'Identify technical solutions for growth (RISE)',assignments:[['SSE','C'],['IA','I'],['EA','A/R'],['CRE','R']]},
+{seg:'EntRISE',phase:'EXTEND',activity:'Cloud Renewal Execution',assignments:[['MP','A/R'],['AE-E','A/R'],['SSE','R'],['SA','C'],['CRE','R']]},
+{seg:'EntRISE',phase:'EXTEND',activity:'Extend Customer Growth',assignments:[['MP','A'],['AE-E','A/R'],['SSE','R'],['SA','C'],['IA','R'],['VA','R'],['EA','R'],['CRE','R'],['DA','C']]}
+
+]; // end RACI_RAW
+
+// ─── Flatten RACI_RAW into records ───────────────────────────────────────────
+const DATA = [];
+RACI_RAW.forEach(function(row) {
+  row.assignments.forEach(function(a) {
+    DATA.push({
+      seg:      row.seg,
+      segName:  SEGMENTS[row.seg] || row.seg,
+      phase:    row.phase,
+      activity: row.activity,
+      role:     a[0],
+      raci:     a[1]
+    });
+  });
+});
+
+// ─── Build role lists per segment & global ───────────────────────────────────
+const ALL_ROLES = {}; // roleKey -> {segments, displayName}
+DATA.forEach(function(d) {
+  var key = d.seg + '::' + d.role;
+  if (!ALL_ROLES[key]) ALL_ROLES[key] = {seg: d.seg, role: d.role, displayName: (ROLE_NAMES[d.seg]||{})[d.role] || d.role};
+});
+
+// Global unique role keys (role name within segment)
+const GLOBAL_ROLES = {}; // role -> [{seg, displayName}]
+DATA.forEach(function(d) {
+  if (!GLOBAL_ROLES[d.role]) GLOBAL_ROLES[d.role] = [];
+  var existing = GLOBAL_ROLES[d.role].find(function(x){ return x.seg===d.seg; });
+  if (!existing) {
+    GLOBAL_ROLES[d.role].push({seg: d.seg, displayName: (ROLE_NAMES[d.seg]||{})[d.role] || d.role});
+  }
+});
+
+// ─── Update stats ────────────────────────────────────────────────────────────
+var uniqueActivities = new Set(DATA.map(function(d){return d.seg+'|'+d.activity;}));
+document.getElementById('stat-total').textContent = uniqueActivities.size;
+var uniqueRoles = new Set(DATA.map(function(d){return d.role;}));
+document.getElementById('stat-roles').textContent = uniqueRoles.size;
+
+// ─── Populate role dropdowns ──────────────────────────────────────────────────
+(function() {
+  var sel = document.getElementById('role-select');
+  var groups = {};
+  Object.keys(SEGMENTS).forEach(function(seg) {
+    var rolesInSeg = [...new Set(DATA.filter(function(d){return d.seg===seg;}).map(function(d){return d.role;}))].sort();
+    groups[seg] = rolesInSeg;
+  });
+  Object.keys(SEGMENTS).forEach(function(seg) {
+    var og = document.createElement('optgroup');
+    og.label = SEGMENTS[seg];
+    groups[seg].forEach(function(r) {
+      var o = document.createElement('option');
+      var dispName = (ROLE_NAMES[seg]||{})[r] || r;
+      o.value = seg+'::'+r;
+      o.textContent = r + (dispName !== r ? ' — '+dispName : '') + ' ('+seg+')';
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+})();
+
+// ─── Populate segment filters ─────────────────────────────────────────────────
+['role-seg-filter','phase-seg-filter'].forEach(function(id) {
+  var sel = document.getElementById(id);
+  Object.keys(SEGMENTS).forEach(function(seg) {
+    var o = document.createElement('option');
+    o.value = seg;
+    o.textContent = SEGMENTS[seg];
+    sel.appendChild(o);
+  });
+});
+
+// ─── RACI filter state ────────────────────────────────────────────────────────
+var raciActive = {R:true, A:true, C:true, I:true};
+function toggleRaci(r) {
+  raciActive[r] = !raciActive[r];
+  var el = document.getElementById('chk-'+r);
+  if (raciActive[r]) el.className = 'raci-check active-'+r;
+  else el.className = 'raci-check';
+  renderRoleMode();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function raciMatchesFilter(raci) {
+  var parts = raci.split('/');
+  return parts.some(function(p){ return raciActive[p]; });
+}
+
+function badgeClass(raci) {
+  var map = {'R':'badge-R','A':'badge-A','C':'badge-C','I':'badge-I',
+             'A/R':'badge-AR','R/A':'badge-AR','R/C':'badge-RC','C/R':'badge-RC',
+             'R/I':'badge-RI','C/I':'badge-CI','I/C':'badge-CI'};
+  return 'badge ' + (map[raci] || 'badge-other');
+}
+
+function segCssClass(seg) {
+  var m = {'AI':'seg-AI','BTP':'seg-BTP','C2C':'seg-C2C','Corporate':'seg-Corporate',
+           'Partner':'seg-Partner','EntStd':'seg-EntStd','EntRISE':'seg-EntRISE'};
+  return 'seg-pill ' + (m[seg] || '');
+}
+
+function phaseCssClass(phase) {
+  return 'phase-pill ph-'+phase;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Mode switching ───────────────────────────────────────────────────────────
+var currentMode = 'role';
+function setMode(m) {
+  currentMode = m;
+  ['role','phase','segment'].forEach(function(x) {
+    document.getElementById('mode-'+x).style.display = x===m ? '' : 'none';
+    var tab = document.getElementById('tab-'+x);
+    tab.className = 'mode-tab' + (x===m ? ' active' : '');
+  });
+  if (m==='role')    renderRoleMode();
+  if (m==='phase')   initPhaseMode();
+  if (m==='segment') initSegmentMode();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BY ROLE MODE
+// ═══════════════════════════════════════════════════════════════
+function renderRoleMode() {
+  var container = document.getElementById('role-results');
+  var val = document.getElementById('role-select').value;
+  if (!val) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">👤</div>Select a role above to see their responsibilities across all CVJ phases.</div>';
+    return;
+  }
+  var parts = val.split('::');
+  var filterSeg = parts[0], filterRole = parts[1];
+  var segFilter = document.getElementById('role-seg-filter').value;
+  var phaseFilter = document.getElementById('role-phase-filter').value;
+  var search = document.getElementById('role-search').value.trim().toLowerCase();
+
+  var rows = DATA.filter(function(d) {
+    if (d.seg !== filterSeg || d.role !== filterRole) return false;
+    if (!raciMatchesFilter(d.raci)) return false;
+    if (segFilter && d.seg !== segFilter) return false;
+    if (phaseFilter && d.phase !== phaseFilter) return false;
+    if (search && d.activity.toLowerCase().indexOf(search) < 0) return false;
+    return true;
+  });
+
+  var roleName = (ROLE_NAMES[filterSeg]||{})[filterRole] || filterRole;
+  var html = '<div class="role-card">';
+  html += '<h2>' + escHtml(filterRole) + ' — ' + escHtml(roleName) + '</h2>';
+  html += '<div class="role-sub"><span class="' + segCssClass(filterSeg) + '">' + escHtml(SEGMENTS[filterSeg]) + '</span> &nbsp;·&nbsp; ';
+  html += rows.length + ' activit' + (rows.length===1?'y':'ies') + ' matching current filters</div>';
+  html += '</div>';
+
+  if (rows.length === 0) {
+    html += '<div class="empty-state"><div class="icon">🔍</div>No activities match the current filters.</div>';
+  } else {
+    html += '<div class="results-table-wrap"><table>';
+    html += '<thead><tr><th>Phase</th><th class="activity-col">Activity</th><th>RACI</th></tr></thead><tbody>';
+    var lastPhase = '';
+    PHASES.forEach(function(phase) {
+      var phRows = rows.filter(function(r){ return r.phase===phase; });
+      phRows.forEach(function(d) {
+        html += '<tr>';
+        html += '<td><span class="' + phaseCssClass(d.phase) + '">' + escHtml(d.phase) + '</span></td>';
+        html += '<td class="activity-col">' + escHtml(d.activity) + '</td>';
+        html += '<td><span class="' + badgeClass(d.raci) + '">' + escHtml(d.raci) + '</span></td>';
+        html += '</tr>';
+      });
+    });
+    html += '</tbody></table></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+// Initial empty state
+document.getElementById('role-results').innerHTML = '<div class="empty-state"><div class="icon">👤</div>Select a role above to see their responsibilities across all CVJ phases.<br><br><small>Example: Select <strong>AE-E — Account Executive - Enterprise (EntStd)</strong> to see all their R and A assignments.</small></div>';
+
+// ═══════════════════════════════════════════════════════════════
+// BY PHASE MODE
+// ═══════════════════════════════════════════════════════════════
+var activePhases = new Set(['DISCOVER','SELECT','ADOPT','DERIVE','EXTEND']);
+
+function initPhaseMode() {
+  var pillsEl = document.getElementById('phase-pills');
+  pillsEl.innerHTML = '';
+  PHASES.forEach(function(p) {
+    var btn = document.createElement('div');
+    btn.className = 'phase-pill-btn' + (activePhases.has(p) ? ' active' : '');
+    btn.textContent = p;
+    btn.onclick = function() {
+      if (activePhases.has(p)) activePhases.delete(p);
+      else activePhases.add(p);
+      btn.className = 'phase-pill-btn' + (activePhases.has(p) ? ' active' : '');
+      renderPhaseMode();
+    };
+    pillsEl.appendChild(btn);
+  });
+  renderPhaseMode();
+}
+
+function renderPhaseMode() {
+  var container = document.getElementById('phase-results');
+  var segFilter = document.getElementById('phase-seg-filter').value;
+  var search = document.getElementById('phase-search').value.trim().toLowerCase();
+  var html = '';
+
+  if (activePhases.size === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📅</div>Select at least one phase above.</div>';
+    return;
+  }
+
+  PHASES.forEach(function(phase) {
+    if (!activePhases.has(phase)) return;
+    var segsToShow = Object.keys(SEGMENTS).filter(function(s){ return !segFilter || s===segFilter; });
+    var phaseHtml = '';
+    segsToShow.forEach(function(seg) {
+      var rows = DATA.filter(function(d) {
+        return d.seg===seg && d.phase===phase &&
+               (!search || d.activity.toLowerCase().indexOf(search)>=0);
+      });
+      // Deduplicate by activity
+      var actMap = {};
+      rows.forEach(function(d) {
+        if (!actMap[d.activity]) actMap[d.activity] = [];
+        actMap[d.activity].push(d);
+      });
+      var activities = Object.keys(actMap);
+      if (activities.length === 0) return;
+
+      phaseHtml += '<div style="margin-bottom:20px;">';
+      phaseHtml += '<div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">';
+      phaseHtml += '<span class="' + segCssClass(seg) + '">' + escHtml(SEGMENTS[seg]) + '</span></div>';
+      phaseHtml += '<div class="results-table-wrap"><table>';
+      phaseHtml += '<thead><tr><th class="activity-col">Activity</th><th>Role Assignments</th></tr></thead><tbody>';
+      activities.forEach(function(act) {
+        var recs = actMap[act];
+        var assigns = recs.map(function(d) {
+          return '<span style="white-space:nowrap;">' + escHtml(d.role) + '&nbsp;<span class="' + badgeClass(d.raci) + '">' + escHtml(d.raci) + '</span></span>';
+        }).join('  ');
+        phaseHtml += '<tr><td class="activity-col">' + escHtml(act) + '</td><td style="line-height:2;">' + assigns + '</td></tr>';
+      });
+      phaseHtml += '</tbody></table></div></div>';
+    });
+
+    if (phaseHtml) {
+      html += '<div class="phase-section">';
+      html += '<h2><span class="' + phaseCssClass(phase) + '" style="font-size:14px;padding:4px 14px;">' + escHtml(phase) + '</span>';
+      html += '</h2>';
+      html += phaseHtml;
+      html += '</div>';
+    }
+  });
+
+  container.innerHTML = html || '<div class="empty-state"><div class="icon">🔍</div>No activities match the current filters.</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BY SEGMENT MODE
+// ═══════════════════════════════════════════════════════════════
+var activeSeg = 'EntStd';
+
+function initSegmentMode() {
+  var pillsEl = document.getElementById('seg-pills');
+  pillsEl.innerHTML = '';
+  Object.keys(SEGMENTS).forEach(function(seg) {
+    var btn = document.createElement('div');
+    btn.className = 'seg-pill-btn' + (seg===activeSeg ? ' active' : '');
+    btn.textContent = seg + ' — ' + SEGMENTS[seg].split(' ')[0] + (seg==='EntStd'?' Standard':seg==='EntRISE'?' RISE PCE':seg==='C2C'?' to Consume':seg==='Partner'?'-Driven':'');
+    btn.onclick = function() {
+      activeSeg = seg;
+      document.querySelectorAll('.seg-pill-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderSegmentMode();
+    };
+    pillsEl.appendChild(btn);
+  });
+  renderSegmentMode();
+}
+
+function renderSegmentMode() {
+  var container = document.getElementById('seg-results');
+  var phaseFilter = document.getElementById('seg-phase-filter').value;
+  var search = document.getElementById('seg-search').value.trim().toLowerCase();
+
+  var segData = DATA.filter(function(d) {
+    return d.seg === activeSeg &&
+           (!phaseFilter || d.phase===phaseFilter) &&
+           (!search || d.activity.toLowerCase().indexOf(search)>=0);
+  });
+
+  if (segData.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div>No activities match.</div>';
+    return;
+  }
+
+  // Get roles for this segment (preserving order from ROLE_NAMES)
+  var rolesOrdered = Object.keys(ROLE_NAMES[activeSeg] || {});
+  // Also add any roles in data not in ROLE_NAMES
+  segData.forEach(function(d) {
+    if (rolesOrdered.indexOf(d.role) < 0) rolesOrdered.push(d.role);
+  });
+  // Only keep roles that appear in filtered data
+  var activeRoles = rolesOrdered.filter(function(r) {
+    return segData.some(function(d){ return d.role===r; });
+  });
+
+  // Build activity map: phase -> activity -> role -> raci
+  var phaseActivityMap = {};
+  PHASES.forEach(function(p) { phaseActivityMap[p] = {}; });
+  segData.forEach(function(d) {
+    if (!phaseActivityMap[d.phase]) phaseActivityMap[d.phase] = {};
+    if (!phaseActivityMap[d.phase][d.activity]) phaseActivityMap[d.phase][d.activity] = {};
+    phaseActivityMap[d.phase][d.activity][d.role] = d.raci;
+  });
+
+  var html = '<div class="seg-matrix-wrap"><table>';
+  html += '<thead><tr><th class="act-col">Activity</th>';
+  activeRoles.forEach(function(r) {
+    html += '<th title="' + escHtml((ROLE_NAMES[activeSeg]||{})[r]||r) + '">' + escHtml(r) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  PHASES.forEach(function(phase) {
+    var acts = Object.keys(phaseActivityMap[phase] || {});
+    if (acts.length === 0) return;
+    // Phase separator row
+    html += '<tr><td class="phase-sep act-col" colspan="' + (activeRoles.length+1) + '">' + escHtml(phase) + '</td></tr>';
+    acts.forEach(function(act) {
+      var roleMap = phaseActivityMap[phase][act];
+      html += '<tr><td class="act-col">' + escHtml(act) + '</td>';
+      activeRoles.forEach(function(r) {
+        var raci = roleMap[r] || '';
+        if (raci) {
+          html += '<td><span class="' + badgeClass(raci) + '">' + escHtml(raci) + '</span></td>';
+        } else {
+          html += '<td style="color:#ddd;">·</td>';
+        }
+      });
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table></div>';
+
+  // Role legend
+  html += '<div style="background:white;border-radius:12px;padding:16px 20px;margin-top:16px;box-shadow:0 1px 4px rgba(0,0,0,0.07);">';
+  html += '<div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Role Legend — ' + escHtml(SEGMENTS[activeSeg]) + '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+  activeRoles.forEach(function(r) {
+    var full = (ROLE_NAMES[activeSeg]||{})[r] || r;
+    html += '<div style="font-size:11px;background:#f5f7fa;border-radius:6px;padding:4px 10px;"><strong>' + escHtml(r) + '</strong>';
+    if (full !== r) html += ' = ' + escHtml(full);
+    html += '</div>';
+  });
+  html += '</div></div>';
+
+  container.innerHTML = html;
+}
+
+// ─── Initial render ───────────────────────────────────────────────────────────
+renderRoleMode();
+</script>
+</body>
+</html>

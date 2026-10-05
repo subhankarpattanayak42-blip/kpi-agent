@@ -3,128 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KPI Status Agent — {{ user.name }}</title>
+<title>KPI Update — {{ user.name }}</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; min-height: 100vh; }
 
-  /* Top bar */
-  .topbar { background: #00335B; color: white; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
-  .topbar .brand { display: flex; align-items: center; gap: 10px; }
-  .topbar .dot { width: 28px; height: 28px; background: #F0AB00; border-radius: 50%; }
-  .topbar .title { font-size: 15px; font-weight: 700; }
-  .topbar .sub { font-size: 11px; color: #aac8e0; }
-  .topbar .user-pill { background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 20px; font-size: 12px; }
-  .topbar a { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 16px; }
+/* ── Top bar ── */
+.topbar { background: #00335B; color: white; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+.topbar .brand { display: flex; align-items: center; gap: 10px; }
+.topbar .dot   { width: 26px; height: 26px; background: #F0AB00; border-radius: 50%; }
+.topbar .title { font-size: 15px; font-weight: 700; }
+.topbar .sub   { font-size: 11px; color: #aac8e0; }
+.topbar .user-pill { background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 20px; font-size: 12px; }
+.topbar a { color: #aac8e0; text-decoration: none; font-size: 12px; margin-left: 16px; }
 
-  /* Progress bar */
-  .progress-bar-wrap { background: #00335B; padding: 0 24px 14px; }
-  .progress-label { font-size: 11px; color: #aac8e0; margin-bottom: 5px; }
-  .progress-track { background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; }
-  .progress-fill { background: #F0AB00; height: 6px; border-radius: 4px; transition: width 0.4s ease; }
-  .progress-steps { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-  .step-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; transition: background 0.3s; }
-  .step-dot.done { background: #F0AB00; }
-  .step-dot.active { background: #007DB8; }
+/* ── Layout ── */
+.page-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
 
-  .main { display: flex; flex: 1; max-width: 1100px; margin: 0 auto; gap: 20px; width: 100%; padding: 20px; min-height: 0; overflow: hidden; }
+/* ── Month bar ── */
+.month-bar { display: flex; align-items: center; gap: 16px; background: white; border-radius: 10px; padding: 12px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex-wrap: wrap; }
+.month-tag { font-size: 13px; font-weight: 700; color: #00335B; }
+.month-val { background: #e3f2fd; color: #0066b2; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.month-sep { color: #ccc; }
+.month-prior { font-size: 12px; color: #888; }
+.month-prior-val { background: #fff8e1; color: #b36e00; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.progress-summary { margin-left: auto; font-size: 12px; color: #888; }
+.progress-summary strong { color: #28a745; }
 
-  /* Chat panel */
-  .chat-panel { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .chat-window { background: white; border-radius: 12px; flex: 1; padding: 20px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  .msg { max-width: 85%; padding: 12px 16px; border-radius: 10px; font-size: 14px; line-height: 1.6; }
-  .msg.agent { background: #e8f4fb; color: #1a1a1a; align-self: flex-start; border-bottom-left-radius: 3px; }
-  .msg.user { background: #00335B; color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
-  .msg-label { font-size: 10px; font-weight: 700; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .msg.agent .msg-label { color: #007DB8; }
-  .msg.user .msg-label { color: rgba(255,255,255,0.6); text-align: right; }
+/* ── Month selector ── */
+.month-select-wrap { display: flex; align-items: center; gap: 10px; }
+.month-select-wrap label { font-size: 13px; font-weight: 700; color: #00335B; white-space: nowrap; }
+.month-dropdown { border: 2px solid #d0e4f4; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: #00335B; background: white; cursor: pointer; outline: none; transition: border-color 0.2s; min-width: 180px; }
+.month-dropdown:focus { border-color: #007DB8; }
+.month-dropdown option.is-active { font-weight: 700; color: #007DB8; }
 
-  .kpi-header { margin-bottom: 6px; }
-  .kpi-num { font-size: 11px; font-weight: 700; color: #007DB8; text-transform: uppercase; }
-  .kpi-name { font-size: 15px; font-weight: 700; color: #00335B; display: block; margin: 3px 0; }
-  .kpi-target { font-size: 11px; color: #666; background: #f0f4f8; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-right: 6px; }
-  .kpi-cat { font-size: 11px; color: #888; background: #fff3e0; padding: 2px 8px; border-radius: 4px; display: inline-block; }
-  .prior-box { background: #fffbe6; border-left: 3px solid #F0AB00; padding: 8px 12px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #555; }
-  .prior-label { font-size: 10px; font-weight: 700; color: #F0AB00; text-transform: uppercase; display: block; margin-bottom: 4px; }
-  .sr-header { background: #e3f2fd; border-left: 4px solid #007DB8; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 13px; }
-  .sr-badge { background: #007DB8; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-right: 6px; }
-  .sr-progress { font-size: 10px; color: #888; }
+/* ── Prior view mode ── */
+body.prior-view .current-cell input,
+body.prior-view .current-cell textarea,
+body.prior-view .ai-draft-btn,
+body.prior-view .row-save-btn,
+body.prior-view .copy-btn,
+body.prior-view .save-all-btn { display: none; }
+body.prior-view .submit-bar { display: none; }
+body.prior-view .kpi-tbl thead th.col-current { background: #fffbe6; color: #b36e00; }
+.hist-view-notice { display: none; background: #fff8e1; border: 1px solid #f0c040; border-radius: 8px; padding: 10px 18px; margin-bottom: 16px; font-size: 13px; color: #7a5800; }
+body.prior-view .hist-view-notice { display: block; }
+.prior-val-display { font-weight: 700; color: #b36e00; font-size: 13px; }
+.prior-nar-display { font-size: 12px; color: #555; line-height: 1.5; margin-top: 4px; }
+.no-prior-data { font-size: 12px; color: #ccc; font-style: italic; }
 
-  /* Input area */
-  .input-area { background: white; border-radius: 12px; padding: 16px; margin-top: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); flex-shrink: 0; }
-  .kpi-value-row { display: none; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .kpi-value-row label { font-size: 12px; font-weight: 700; color: #00335B; white-space: nowrap; }
-  .kpi-value-row input { border: 2px solid #007DB8; border-radius: 6px; padding: 8px 12px; font-size: 14px; font-weight: 700; width: 130px; color: #00335B; }
-  .kpi-value-row input:focus { outline: none; border-color: #F0AB00; }
-  .kpi-value-hint { font-size: 11px; color: #888; }
-  .input-row { display: flex; gap: 10px; align-items: flex-end; }
-  textarea { flex: 1; border: 2px solid #e0e0e0; border-radius: 8px; padding: 12px; font-size: 14px; font-family: inherit; resize: none; min-height: 80px; transition: border-color 0.2s; }
-  textarea:focus { outline: none; border-color: #007DB8; }
-  .send-btn { background: #007DB8; color: white; border: none; border-radius: 8px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background 0.2s; min-height: 80px; }
-  .send-btn:hover { background: #00335B; }
-  .send-btn:disabled { background: #ccc; cursor: default; }
-  .action-btns { display: flex; gap: 10px; margin-top: 10px; }
-  .btn { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
-  .btn-start { background: #00335B; color: white; }
-  .btn-start:hover { background: #007DB8; }
-  .btn-submit { background: #28a745; color: white; display: none; }
-  .btn-submit:hover { background: #1e7e34; }
-  .btn-skip { background: #f0f4f8; color: #666; }
-  .btn-skip:hover { background: #e0e8f0; }
+/* ── Sub-region tabs ── */
+.sr-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.sr-tab { padding: 9px 18px; border-radius: 20px; border: 2px solid #d0e4f4; background: white; font-size: 13px; font-weight: 600; color: #007DB8; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.sr-tab:hover { background: #e8f4fd; border-color: #007DB8; }
+.sr-tab.active { background: #00335B; color: white; border-color: #00335B; }
+.sr-tab .sr-count { font-size: 10px; background: rgba(0,0,0,0.12); padding: 1px 6px; border-radius: 8px; font-weight: 700; }
+.sr-tab.active .sr-count { background: rgba(255,255,255,0.2); }
+.sr-tab .sr-check { color: #28a745; font-size: 12px; }
+.sr-tab.active .sr-check { color: #a0f0b0; }
 
-  /* Side panel */
-  .side-panel { width: 280px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
-  .side-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
-  .side-title { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
-  .info-row:last-child { border-bottom: none; }
-  .info-label { color: #888; }
-  .info-val { font-weight: 600; color: #00335B; }
-  .kpi-list-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 12px; color: #555; border-bottom: 1px solid #f5f5f5; }
-  .kpi-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; flex-shrink: 0; }
-  .kpi-dot.done { background: #28a745; }
-  .kpi-dot.active { background: #007DB8; }
-  .typing { display: flex; gap: 4px; align-items: center; padding: 8px 0; }
-  .typing span { width: 7px; height: 7px; border-radius: 50%; background: #007DB8; animation: bounce 1.2s infinite; }
-  .typing span:nth-child(2) { animation-delay: 0.2s; }
-  .typing span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+/* ── KPI table card ── */
+.kpi-card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+.kpi-card-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.kpi-card-title { font-size: 15px; font-weight: 700; color: #00335B; }
+.kpi-card-sub { font-size: 12px; color: #888; margin-top: 2px; }
+.save-all-btn { background: #28a745; color: white; border: none; border-radius: 8px; padding: 10px 22px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.save-all-btn:hover { background: #1e7e34; }
+.save-all-btn:disabled { background: #ccc; cursor: default; }
 
-  /* KPI Tracker Panel */
-  .tracker-sr-block { margin-bottom: 14px; }
-  .tracker-sr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #007DB8; padding: 4px 0 6px; border-bottom: 2px solid #e8f4fb; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-  .tracker-sr-label .sr-badge-sm { background: #007DB8; color: white; font-size: 9px; padding: 2px 6px; border-radius: 3px; }
-  .tracker-kpi-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 6px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px; border: 1px solid transparent; }
-  .tracker-kpi-row:hover { background: #f0f4f8; border-color: #d0e4f4; }
-  .tracker-kpi-row.active-kpi { background: #e3f2fd; border-color: #007DB8; }
-  .tracker-kpi-row.editing-kpi { background: #fff8e1; border-color: #F0AB00; }
-  .tracker-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .tracker-status-dot.done { background: #28a745; }
-  .tracker-status-dot.active { background: #007DB8; animation: pulse-dot 1.2s infinite; }
-  .tracker-status-dot.pending { background: #dc3545; }
-  @keyframes pulse-dot { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-  .tracker-kpi-name { font-size: 11px; color: #333; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tracker-kpi-value { font-size: 11px; font-weight: 700; color: #dc3545; background: #fde8ea; padding: 2px 6px; border-radius: 4px; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
-  .tracker-kpi-value.has-value { background: #d4edda; color: #155724; }
-  .tracker-edit-btn { background: none; border: 1px solid #ccc; border-radius: 4px; font-size: 10px; color: #007DB8; padding: 2px 6px; cursor: pointer; flex-shrink: 0; transition: all 0.15s; }
-  .tracker-edit-btn:hover { background: #007DB8; color: white; border-color: #007DB8; }
-  .tracker-refresh-btn { background: none; border: none; font-size: 11px; color: #aac8e0; cursor: pointer; padding: 0; }
-  .tracker-refresh-btn:hover { color: #007DB8; }
-  /* Edit drawer that appears in chat */
-  .edit-drawer { background: #fff8e1; border: 2px solid #F0AB00; border-radius: 10px; padding: 14px; margin-bottom: 8px; display: none; }
-  .edit-drawer.show { display: block; }
-  .edit-drawer-title { font-size: 12px; font-weight: 700; color: #856404; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-  .edit-drawer-kpi { font-size: 14px; font-weight: 700; color: #00335B; margin-bottom: 4px; }
-  .edit-drawer-current { font-size: 12px; color: #666; background: #f5f5f5; border-radius: 5px; padding: 6px 10px; margin-bottom: 10px; }
-  .edit-drawer-current strong { color: #00335B; }
-  .edit-close-btn { background: none; border: none; font-size: 16px; cursor: pointer; color: #aaa; line-height: 1; }
-  .edit-close-btn:hover { color: #dc3545; }
-  /* KPI confirmation toast */
-  .kpi-toast { display: none; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 700; color: #155724; margin-bottom: 8px; }
-  .kpi-toast.show { display: block; }
+/* ── Table ── */
+.kpi-tbl { width: 100%; border-collapse: collapse; }
+.kpi-tbl thead th { background: #f8f9fa; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e8e8e8; white-space: nowrap; }
+.kpi-tbl thead th.col-prior { background: #fffbe6; color: #b36e00; }
+.kpi-tbl thead th.col-current { background: #e8f4fd; color: #0066b2; }
+.kpi-tbl tbody tr { border-bottom: 1px solid #f5f5f5; transition: background 0.15s; }
+.kpi-tbl tbody tr:last-child { border-bottom: none; }
+.kpi-tbl tbody tr:hover { background: #fafbfc; }
+.kpi-tbl td { padding: 12px 14px; vertical-align: top; font-size: 13px; }
 
-  .success-msg { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 16px; color: #155724; font-size: 14px; text-align: center; display: none; }
+/* KPI name col */
+.kpi-name-cell .kpi-label { font-weight: 700; color: #00335B; font-size: 13px; margin-bottom: 3px; }
+.kpi-name-cell .kpi-target { font-size: 11px; color: #007DB8; background: #e3f2fd; padding: 2px 7px; border-radius: 10px; display: inline-block; }
+.kpi-name-cell .kpi-cat { font-size: 11px; color: #888; background: #f5f5f5; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-left: 4px; }
+
+/* Prior month col */
+.prior-cell { background: #fffdf0; }
+.prior-value { font-weight: 700; color: #b36e00; font-size: 13px; }
+.prior-narrative { font-size: 12px; color: #888; line-height: 1.5; margin-top: 4px; max-width: 240px; }
+.copy-btn { background: #28a745; color: white; border: none; border-radius: 5px; padding: 4px 11px; font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+.copy-btn:hover { background: #1e7e34; transform: scale(1.04); }
+.copy-btn.copied { background: #007DB8; }
+.no-prior { font-size: 12px; color: #ccc; font-style: italic; }
+
+/* Current month inputs */
+.current-cell { background: #f0f8ff; }
+.value-input { border: 2px solid #d0e4f4; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-weight: 700; width: 110px; color: #00335B; font-family: inherit; transition: border-color 0.2s; }
+.value-input:focus { outline: none; border-color: #007DB8; }
+.narrative-textarea { width: 100%; border: 2px solid #d0e4f4; border-radius: 6px; padding: 7px 10px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 64px; margin-top: 6px; transition: border-color 0.2s; color: #333; }
+.narrative-textarea:focus { outline: none; border-color: #007DB8; }
+.ai-draft-btn { background: none; border: 1px solid #007DB8; color: #007DB8; border-radius: 5px; padding: 3px 9px; font-size: 11px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: all 0.15s; }
+.ai-draft-btn:hover { background: #007DB8; color: white; }
+.ai-draft-btn:disabled { border-color: #ccc; color: #ccc; cursor: default; }
+
+/* Status col */
+.status-cell { width: 80px; text-align: center; }
+.row-status { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 14px; }
+.row-status.saved   { background: #d4edda; color: #155724; }
+.row-status.pending { background: #fde8ea; color: #dc3545; }
+.row-status.saving  { background: #e3f2fd; color: #007DB8; }
+
+/* Row-level save btn */
+.row-save-btn { background: #007DB8; color: white; border: none; border-radius: 5px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; margin-top: 6px; display: block; transition: background 0.15s; }
+.row-save-btn:hover { background: #00335B; }
+
+/* ── Submit section ── */
+.submit-bar { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.submit-info { font-size: 13px; color: #666; }
+.submit-info strong { color: #00335B; }
+.submit-btn { background: #00335B; color: white; border: none; border-radius: 8px; padding: 12px 28px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.submit-btn:hover { background: #007DB8; }
+.submit-btn:disabled { background: #ccc; cursor: default; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #00335B; color: white; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; display: none; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.toast.success { background: #28a745; }
+.toast.error   { background: #dc3545; }
+
+/* ── Success ── */
+.success-banner { display: none; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 10px; padding: 24px; text-align: center; margin-top: 24px; }
+.success-banner h2 { color: #155724; margin-bottom: 8px; }
+.success-banner p  { color: #555; font-size: 13px; }
+
+/* ── Loading skeleton ── */
+.skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e8f0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 4px; height: 14px; margin: 4px 0; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 </style>
 </head>
 <body>
@@ -137,522 +149,509 @@
       <div class="sub">SAP IM Regional Strategy &amp; Programs</div>
     </div>
   </div>
-  <div style="display:flex; align-items:center;">
-    <div class="user-pill">{{ user.name }} · {{ user.role }} / {{ user.region }}</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="user-pill">{{ user.name }} · {% if user.user_type == 'dri' %}DRI · {{ user.sub_region }} ({{ user.region }}){% else %}{{ user.role }} / {{ user.region }}{% endif %}</div>
+    {% if user.user_type == 'leader' and user.role == 'EA' %}
+    <a href="/review" style="background:#F0AB00;color:#00335B;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;">📊 Review MU Submissions</a>
+    {% endif %}
     <a href="/logout">Sign out</a>
   </div>
 </div>
 
-<div class="progress-bar-wrap">
-  <div class="progress-label" id="progress-label">Starting your session…</div>
-  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-  <div class="progress-steps" id="step-dots">
-    {% if sub_regions %}
-      {% for sr in sub_regions %}
-      <div class="step-dot" id="sr-dot-{{ loop.index0 }}" title="{{ sr }}">{{ loop.index }}</div>
-      {% endfor %}
-    {% else %}
-      {% for kpi in range(total_kpis) %}
-      <div class="step-dot" id="dot-{{ kpi }}" title="KPI {{ kpi+1 }}">{{ kpi+1 }}</div>
-      {% endfor %}
-    {% endif %}
-  </div>
-</div>
+<div class="page-wrap">
 
-<div class="main">
-  <div class="chat-panel">
-    <div class="chat-window" id="chat-window"></div>
-    <div class="input-area">
-      <div class="kpi-toast" id="kpi-toast"></div>
-      <div class="edit-drawer" id="edit-drawer">
-        <div class="edit-drawer-title">
-          <span>✏️ Editing KPI</span>
-          <button class="edit-close-btn" onclick="closeEditDrawer()">✕</button>
-        </div>
-        <div class="edit-drawer-kpi" id="edit-drawer-kpi"></div>
-        <div class="edit-drawer-current" id="edit-drawer-current"></div>
-      </div>
-      <div class="kpi-value-row" id="kpi-value-row">
-        <label for="kpi-value-input">KPI Value:</label>
-        <input type="text" id="kpi-value-input" placeholder="e.g. 82%" />
-        <span class="kpi-value-hint">Enter the number first, then describe below</span>
-      </div>
-      <div class="input-row">
-        <textarea id="user-input" placeholder="Type your update here…" rows="3"></textarea>
-        <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Send →</button>
-      </div>
-      <div class="action-btns">
-        <button class="btn btn-start" id="start-btn" onclick="startSession()">Begin Update →</button>
-        <button class="btn btn-skip" id="skip-btn" onclick="skipKpi()" style="display:none">Skip this KPI</button>
-        <button class="btn btn-submit" id="submit-btn" onclick="submitAll()">Submit to Sponsor ✓</button>
-        {% if sub_regions and sub_regions|length > 1 %}
-        <div style="position:relative;display:none;" id="sr-switch-wrap">
-          <button class="btn btn-skip" id="sr-switch-btn" onclick="toggleSrMenu()" style="display:none;font-size:11px;">⇄ Switch sub-region</button>
-          <div id="sr-switch-menu" style="display:none;position:absolute;bottom:40px;left:0;background:white;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.12);min-width:160px;z-index:100;">
-            {% for sr in sub_regions %}
-            <button onclick="jumpToSubRegion({{ loop.index0 }});toggleSrMenu();" style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;background:none;font-size:12px;cursor:pointer;border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background='#f0f4f8'" onmouseout="this.style.background='none'">{{ sr }}</button>
-            {% endfor %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
+  <!-- Month bar -->
+  <div class="month-bar">
+    <div class="month-select-wrap">
+      <label for="month-dropdown">📅 Viewing:</label>
+      <select class="month-dropdown" id="month-dropdown" onchange="onMonthChange(this.value)">
+        <option value="__active__" class="is-active">{{ current_month }} (current)</option>
+      </select>
     </div>
-    <div class="success-msg" id="success-msg"></div>
+    <span class="progress-summary" id="progress-summary">Loading…</span>
   </div>
 
-  <div class="side-panel">
-    <div class="side-card">
-      <div class="side-title">Your Details</div>
-      <div class="info-row"><span class="info-label">Name</span><span class="info-val">{{ user.name }}</span></div>
-      <div class="info-row"><span class="info-label">Role</span><span class="info-val">{{ role_name }}</span></div>
-      <div class="info-row"><span class="info-label">Region</span><span class="info-val">{{ user.region }}</span></div>
-      {% if sub_regions %}
-      <div class="info-row"><span class="info-label">Sub-regions</span><span class="info-val">{{ total_sub_regions }}</span></div>
-      {% endif %}
-      <div class="info-row"><span class="info-label">Reporting month</span><span class="info-val">Sep 2026</span></div>
-      <div class="info-row"><span class="info-label">Prior month</span><span class="info-val">{{ prior_month }}</span></div>
-    </div>
-    <div class="side-card">
-      <div class="side-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>KPI Tracker — click any row to edit</span>
-        <button class="tracker-refresh-btn" onclick="refreshTracker()" title="Refresh from DB">↻</button>
-      </div>
-      <div id="kpi-tracker">
-        <p style="font-size:12px;color:#aaa;font-style:italic;">Starting session…</p>
-      </div>
-    </div>
-    <div class="side-card" style="background:#fffbe6; border:1px solid #F0AB00;">
-      <div class="side-title" style="color:#c87d00;">How this works</div>
-      <p style="font-size:12px; color:#666; line-height:1.6;">
-        I'll walk you through each KPI and show what you said last month. Update or confirm each one, then submit. Your Global Role Sponsor will review before the report is generated.
-      </p>
-    </div>
+  <!-- Historical view notice -->
+  <div class="hist-view-notice" id="hist-notice">
+    📋 Viewing <strong id="hist-notice-label"></strong> — read only.
+    <a href="#" onclick="onMonthChange('__active__'); return false;" style="color:#b36e00; font-weight:700; margin-left:10px;">Back to current month →</a>
   </div>
-</div>
+
+  <!-- Sub-region tabs — hidden for DRI (single MU) -->
+  <div class="sr-tabs" id="sr-tabs" {% if sub_regions|length <= 1 %}style="display:none"{% endif %}>
+    {% for sr in sub_regions %}
+    <button class="sr-tab {% if loop.first %}active{% endif %}" id="tab-{{ loop.index0 }}" onclick="switchSr({{ loop.index0 }})">
+      {{ sr }}
+      <span class="sr-count" id="tab-count-{{ loop.index0 }}">…</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- KPI table (one per sub-region, shown/hidden) -->
+  {% for sr in sub_regions %}
+  <div id="sr-panel-{{ loop.index0 }}" class="kpi-card" {% if not loop.first %}style="display:none"{% endif %}>
+    <div class="kpi-card-header">
+      <div>
+        <div class="kpi-card-title">{{ sr }} — {% if user.user_type == 'dri' %}DRI EA KPI Update{% else %}{{ user.role }} KPI Update{% endif %}</div>
+        <div class="kpi-card-sub">{% if user.user_type == 'dri' %}{{ user.region }} · Market Unit: {{ sr }} · Fill in values and save each row. Your data rolls up to the Regional EA leader.{% else %}{{ user.region }} · Fill in values and save each row. The sponsor will review before finalising.{% endif %}</div>
+      </div>
+    </div>
+    <table class="kpi-tbl">
+      <thead>
+        <tr>
+          <th style="width:200px;">KPI</th>
+          <th class="col-prior" style="width:260px;" id="hdr-prior-{{ loop.index0 }}">◀ Last Month</th>
+          <th class="col-current" id="hdr-cur1-{{ loop.index0 }}">This Month — Value</th>
+          <th class="col-current" id="hdr-cur2-{{ loop.index0 }}">This Month — Narrative / Comment</th>
+          <th style="width:70px;text-align:center;" id="hdr-status-{{ loop.index0 }}">Saved</th>
+        </tr>
+      </thead>
+      <tbody id="kpi-tbody-{{ loop.index0 }}">
+        <!-- populated by JS -->
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+  <!-- Submit bar -->
+  <div class="submit-bar" id="submit-bar">
+    <div class="submit-info">
+      <strong id="submit-count">0 of {{ total_kpis * (sub_regions|length) }}</strong> KPIs saved{% if user.user_type == 'dri' %} for {{ sub_regions[0] if sub_regions else 'your Market Unit' }}.
+      When done, submit to your Regional EA Leader for review.{% else %} across all sub-regions.
+      When all done, submit to your Global Sponsor for review.{% endif %}
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="submitAll()">{% if user.user_type == 'dri' %}Submit to Regional Leader →{% else %}Submit to Sponsor →{% endif %}</button>
+  </div>
+
+  <div class="success-banner" id="success-banner">
+    <h2>✓ Submitted!</h2>
+    <p>Your KPI update for {{ current_month }} has been sent to your {% if user.user_type == 'dri' %}Regional EA Leader{% else %}Global Sponsor{% endif %} for review.</p>
+    <br>
+    <a href="/logout" style="color:#155724;font-weight:700;">Sign out</a>
+  </div>
+
+</div><!-- /.page-wrap -->
+
+<div class="toast" id="toast"></div>
 
 <script>
-const totalKpis = {{ total_kpis }};
-const subRegions = {{ sub_regions | tojson }};
-const totalSr = subRegions.length;
-let currentKpiIndex = -1;
-let currentSrIndex = 0;
-let completedSrIndices = new Set();
-let sessionStarted = false;
+const SUB_REGIONS  = {{ sub_regions | tojson }};
+const TOTAL_KPIS   = {{ total_kpis }};
+const USER_TYPE    = {{ user.user_type | tojson }};
+const DRI_SUB_REGION = {{ (user.sub_region or '') | tojson }};
+let kpiDefs      = [];
+let currentData  = {};   // active-cycle sub_data
+let priorData    = {};   // data for the currently viewed historical month
+let activeSri    = 0;
+let savedCount   = 0;
+let viewMode     = 'current';     // 'current' | 'historical'
+let activeMonthLabel = '{{ current_month }}';
+let availableMonths  = [];
 
-// Tracker state — mirrored from DB
-let trackerData = { sub_regions: [], sub_data: {}, kpis: [] };
-let activeTrackerSri = null;
-let activeTrackerKi  = null;
-
-// ── Tracker ──────────────────────────────────────────────────
-async function refreshTracker() {
+// ── Load available months into dropdown ──────────────────────────────────────
+async function loadAvailableMonths() {
   try {
-    const res = await fetch('/api/my-kpis');
-    trackerData = await res.json();
-    renderTracker();
-  } catch(e) { /* silent */ }
+    const res = await fetch('/api/available-months');
+    const d   = await res.json();
+    availableMonths = d.months || [];
+    const sel = document.getElementById('month-dropdown');
+    // Clear existing options (keep the first placeholder added server-side)
+    sel.innerHTML = '';
+    availableMonths.forEach(function(m) {
+      const opt = document.createElement('option');
+      opt.value = m.is_active ? '__active__' : m.month_key;
+      opt.textContent = m.month_label + (m.is_active ? ' (current)' : '');
+      if (m.is_active) opt.className = 'is-active';
+      sel.appendChild(opt);
+    });
+    // If no months came back, add a fallback
+    if (sel.options.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '__active__';
+      opt.textContent = activeMonthLabel + ' (current)';
+      opt.className = 'is-active';
+      sel.appendChild(opt);
+    }
+  } catch(e) {
+    // silently fail — dropdown will just have the server-rendered default
+  }
 }
 
-function renderTracker() {
-  const el = document.getElementById('kpi-tracker');
-  if (!el) return;
-  const { sub_regions, sub_data, kpis } = trackerData;
-  if (!kpis || !kpis.length) {
-    el.innerHTML = '<p style="font-size:12px;color:#aaa;font-style:italic;">No KPIs loaded yet.</p>';
+// ── Month dropdown change ─────────────────────────────────────────────────────
+async function onMonthChange(monthKey) {
+  const sel = document.getElementById('month-dropdown');
+  if (sel) sel.value = monthKey;
+
+  if (monthKey === '__active__') {
+    // Switch back to current editable view
+    viewMode = 'current';
+    document.body.classList.remove('prior-view');
+    document.getElementById('hist-notice').style.display = 'none';
+    // Reload active data
+    await loadData();
+  } else {
+    // Load a specific historical month (read-only)
+    viewMode = 'historical';
+    document.body.classList.add('prior-view');
+    try {
+      const res = await fetch('/api/my-kpis?month=' + encodeURIComponent(monthKey));
+      const d   = await res.json();
+      kpiDefs   = d.kpis || kpiDefs;
+      priorData = d.prior_data || {};
+      // Show notice
+      const label = d.viewed_month || d.prior_month || monthKey;
+      const notice = document.getElementById('hist-notice');
+      const noticeLabel = document.getElementById('hist-notice-label');
+      if (notice)      notice.style.display = 'block';
+      if (noticeLabel) noticeLabel.textContent = label;
+      // Update column headers
+      updateColumnHeaders(label);
+      // Re-render tables in read-only mode
+      SUB_REGIONS.forEach(function(sr, sri) { renderTable(sri); });
+    } catch(e) {
+      showToast('Could not load data for that month', 'error');
+    }
+  }
+}
+
+// ── Update column headers based on viewed month ───────────────────────────────
+function updateColumnHeaders(label) {
+  SUB_REGIONS.forEach(function(_, sri) {
+    var hPrior = document.getElementById('hdr-prior-' + sri);
+    var hCur1  = document.getElementById('hdr-cur1-'  + sri);
+    var hCur2  = document.getElementById('hdr-cur2-'  + sri);
+    var hStat  = document.getElementById('hdr-status-' + sri);
+    if (viewMode === 'historical') {
+      if (hPrior) hPrior.style.display = 'none';
+      if (hCur1)  { hCur1.textContent = label + ' — Value';     hCur1.className = 'col-prior'; }
+      if (hCur2)  { hCur2.textContent = label + ' — Narrative'; hCur2.className = 'col-prior'; }
+      if (hStat)  hStat.style.display = 'none';
+    } else {
+      if (hPrior) hPrior.style.display = '';
+      if (hCur1)  { hCur1.textContent = 'This Month — Value';               hCur1.className = 'col-current'; }
+      if (hCur2)  { hCur2.textContent = 'This Month — Narrative / Comment'; hCur2.className = 'col-current'; }
+      if (hStat)  hStat.style.display = '';
+    }
+  });
+}
+
+// ── Load data from API ───────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res  = await fetch('/api/my-kpis');
+    const d    = await res.json();
+    kpiDefs     = d.kpis || [];
+    currentData = d.sub_data || {};
+    priorData   = d.prior_data || {};
+    activeMonthLabel = d.current_month || activeMonthLabel;
+    // Hide historical notice
+    const notice = document.getElementById('hist-notice');
+    if (notice) notice.style.display = 'none';
+    // Reset column headers
+    updateColumnHeaders('');
+    SUB_REGIONS.forEach(function(sr, sri) { renderTable(sri); });
+    updateProgress();
+  } catch(e) {
+    showToast('Error loading KPI data: ' + e.message, 'error');
+  }
+}
+
+// ── Render one sub-region table ──────────────────────────────────────────────
+function renderTable(sri) {
+  const sr   = SUB_REGIONS[sri];
+  const tbody = document.getElementById('kpi-tbody-' + sri);
+  if (!tbody || !kpiDefs.length) return;
+  const srData = currentData[sr] || {};
+  let html = '';
+  kpiDefs.forEach(function(kpi) {
+    const cur   = srData[kpi.id] || {};
+    const curVal = cur.value || '';
+    const curNar = cur.narrative || '';
+    const prior  = priorData[kpi.id] || {};
+    const pVal   = prior.value || '';
+    const pNar   = prior.narrative || '';
+    const hasSaved = curVal && curVal !== '—';
+    const statusIcon = hasSaved ? '✓' : '—';
+    const statusClass = hasSaved ? 'saved' : 'pending';
+
+    html += '<tr id="row-' + sri + '-' + kpi.id + '">';
+    // KPI name
+    html += '<td class="kpi-name-cell">'
+          + '<div class="kpi-label">' + esc(kpi.label) + '</div>'
+          + '<span class="kpi-target">Target: ' + esc(kpi.target||'') + '</span>'
+          + '<span class="kpi-cat">' + esc(kpi.category||'') + '</span>'
+          + '</td>';
+
+    if (viewMode === 'prior') {
+      // PRIOR VIEW: hide last-month column, show prior data in the "current" cols
+      html += '<td class="prior-cell" style="display:none"></td>';
+      // Prior value cell
+      html += '<td class="prior-cell">';
+      if (pVal) {
+        html += '<div class="prior-val-display">' + esc(pVal) + '</div>';
+      } else {
+        html += '<span class="no-prior-data">No data</span>';
+      }
+      html += '</td>';
+      // Prior narrative cell
+      html += '<td class="prior-cell">';
+      if (pNar) {
+        html += '<div class="prior-nar-display">' + esc(pNar) + '</div>';
+      } else {
+        html += '<span class="no-prior-data">—</span>';
+      }
+      html += '</td>';
+      // Hidden status col
+      html += '<td class="status-cell" style="display:none"></td>';
+    } else {
+      // CURRENT VIEW: normal editable layout
+      // Prior month
+      html += '<td class="prior-cell">';
+      if (pVal) {
+        html += '<div class="prior-value">' + esc(pVal) + '</div>';
+        if (pNar) html += '<div class="prior-narrative">' + esc(pNar) + '</div>';
+        html += '<button class="copy-btn" id="copy-' + sri + '-' + esc(kpi.id) + '" onclick="copyFromPrior(' + sri + ',\'' + esc(kpi.id) + '\',\'' + escQ(pVal) + '\',\'' + escQ(pNar) + '\')">✓ Use this</button>';
+      } else {
+        html += '<span class="no-prior">No prior data</span>';
+      }
+      html += '</td>';
+      // Current value input
+      html += '<td class="current-cell">'
+            + '<input type="text" class="value-input" id="val-' + sri + '-' + kpi.id + '" '
+            + 'value="' + esc(curVal) + '" placeholder="e.g. ' + esc(kpi.target||'') + '" '
+            + 'onblur="autoSave(' + sri + ',\'' + kpi.id + '\')" '
+            + 'onkeydown="if(event.key===\'Enter\'){autoSave(' + sri + ',\'' + kpi.id + '\')}">'
+            + '</td>';
+      // Narrative + AI draft
+      html += '<td class="current-cell">'
+            + '<textarea class="narrative-textarea" id="nar-' + sri + '-' + kpi.id + '" '
+            + 'placeholder="Optional comment…" '
+            + 'onblur="autoSave(' + sri + ',\'' + kpi.id + '\')">' + esc(curNar) + '</textarea>'
+            + '<button class="ai-draft-btn" id="ai-btn-' + sri + '-' + kpi.id + '" '
+            + 'onclick="aiDraft(' + sri + ',\'' + kpi.id + '\')">✦ AI Draft</button>'
+            + '<button class="row-save-btn" onclick="saveRow(' + sri + ',\'' + kpi.id + '\')">Save row</button>'
+            + '</td>';
+      // Status
+      html += '<td class="status-cell">'
+            + '<div class="row-status ' + statusClass + '" id="status-' + sri + '-' + kpi.id + '">' + statusIcon + '</div>'
+            + '</td>';
+    }
+
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+  updateTabCount(sri);
+}
+// ── Copy prior month into current inputs ─────────────────────────────────────
+function copyFromPrior(sri, kpiId, val, nar) {
+  const valEl = document.getElementById('val-' + sri + '-' + kpiId);
+  const narEl = document.getElementById('nar-' + sri + '-' + kpiId);
+  const btn   = document.getElementById('copy-' + sri + '-' + kpiId);
+  if (valEl) valEl.value = val;
+  if (narEl) narEl.value = nar;
+  // Flash gold border on inputs
+  [valEl, narEl].forEach(function(el) {
+    if (!el) return;
+    el.style.borderColor = '#F0AB00';
+    el.style.background  = '#fffbe6';
+    setTimeout(function() { el.style.borderColor = ''; el.style.background = ''; }, 900);
+  });
+  // Change button to "Copied ✓" briefly
+  if (btn) {
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(function() { btn.textContent = '✓ Use this'; btn.classList.remove('copied'); }, 1800);
+  }
+  // Auto-save
+  autoSave(sri, kpiId);
+}
+
+// ── Auto-save on blur / Enter ─────────────────────────────────────────────────
+let saveTimers = {};
+function autoSave(sri, kpiId) {
+  const key = sri + '-' + kpiId;
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(function() { saveRow(sri, kpiId); }, 600);
+}
+
+// ── Save one row ──────────────────────────────────────────────────────────────
+async function saveRow(sri, kpiId) {
+  const sr    = SUB_REGIONS[sri];
+  const valEl = document.getElementById('val-' + sri + '-' + kpiId);
+  const narEl = document.getElementById('nar-' + sri + '-' + kpiId);
+  const statEl = document.getElementById('status-' + sri + '-' + kpiId);
+  if (!valEl) return;
+  const value     = valEl.value.trim();
+  const narrative = narEl ? narEl.value.trim() : '';
+  if (!value) return;  // nothing to save if value is empty
+  // Mark saving
+  if (statEl) { statEl.className = 'row-status saving'; statEl.textContent = '…'; }
+  try {
+    const res = await fetch('/api/save-kpi', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sub_region: sr, kpi_id: kpiId, value: value, narrative: narrative})
+    });
+    const d = await res.json();
+    if (d.success) {
+      if (statEl) { statEl.className = 'row-status saved'; statEl.textContent = '✓'; }
+      // Update local cache
+      if (!currentData[sr]) currentData[sr] = {};
+      currentData[sr][kpiId] = {value: value, narrative: narrative};
+      updateProgress();
+      updateTabCount(sri);
+    } else {
+      if (statEl) { statEl.className = 'row-status pending'; statEl.textContent = '!'; }
+      showToast('Save error: ' + (d.error || 'unknown'), 'error');
+    }
+  } catch(e) {
+    if (statEl) { statEl.className = 'row-status pending'; statEl.textContent = '!'; }
+    showToast('Network error', 'error');
+  }
+}
+
+// ── AI Draft ──────────────────────────────────────────────────────────────────
+async function aiDraft(sri, kpiId) {
+  const sr    = SUB_REGIONS[sri];
+  const valEl = document.getElementById('val-' + sri + '-' + kpiId);
+  const narEl = document.getElementById('nar-' + sri + '-' + kpiId);
+  const btn   = document.getElementById('ai-btn-' + sri + '-' + kpiId);
+  if (!valEl || !valEl.value.trim()) {
+    showToast('Enter a value first, then click AI Draft', 'error');
     return;
   }
-  let html = '';
-  const srs = (sub_regions && sub_regions.length) ? sub_regions : [''];
-  srs.forEach(function(sr, sri) {
-    const srData = sub_data[sr] || {};
-    const filled = kpis.filter(function(k) {
-      const e = srData[k.id]; return e && e.value && e.value !== '—' && e.value !== '-';
-    }).length;
-    const srLabel = sr || 'All KPIs';
-    html += '<div class="tracker-sr-block">';
-    if (sr) {
-      html += '<div class="tracker-sr-label"><span>' + srLabel + '</span>'
-            + '<span style="font-size:10px;color:#888;">' + filled + '/' + kpis.length + '</span></div>';
-    }
-    kpis.forEach(function(kpi, ki) {
-      const entry = srData[kpi.id] || {};
-      const val   = entry.value || '';
-      const nar   = entry.narrative || '';
-      const hasVal = val && val !== '—' && val !== '-';
-      const isActive = (sri === activeTrackerSri && ki === activeTrackerKi);
-      const rowClass = isActive ? 'tracker-kpi-row editing-kpi' : 'tracker-kpi-row';
-      const dotClass = hasVal ? 'done' : (isActive ? 'active' : 'pending');
-      const valDisplay = hasVal ? val : '—';
-      const valClass = hasVal ? 'tracker-kpi-value has-value' : 'tracker-kpi-value';
-      // Encode for inline onclick
-      const safeLabel = kpi.label.replace(/'/g, '\\\'');
-      const safeVal   = val.replace(/'/g, '\\\'');
-      const safeNar   = nar.replace(/'/g, '\\\'').replace(/\n/g, ' ');
-      const editOnclick = sr
-        ? "trackerEdit(" + sri + "," + ki + ",'" + safeLabel + "','" + safeVal + "','" + safeNar + "','" + sr + "')"
-        : "trackerEditFlat(" + ki + ",'" + safeLabel + "','" + safeVal + "','" + safeNar + "')";
-      html += '<div class="' + rowClass + '" onclick="' + editOnclick + '">'
-            + '<div class="tracker-status-dot ' + dotClass + '"></div>'
-            + '<span class="tracker-kpi-name" title="' + kpi.label + '">' + kpi.label + '</span>'
-            + '<span class="' + valClass + '">' + valDisplay + '</span>'
-            + (hasVal
-               ? '<button class="tracker-edit-btn" onclick="event.stopPropagation();' + editOnclick + '">Edit</button>'
-               : '')
-            + '</div>';
-    });
-    html += '</div>';
-  });
-  el.innerHTML = html;
-}
-
-function trackerEdit(sri, ki, label, currentVal, currentNar, sr) {
-  activeTrackerSri = sri;
-  activeTrackerKi  = ki;
-  renderTracker();
-  // Show edit drawer with current value
-  const drawer = document.getElementById('edit-drawer');
-  document.getElementById('edit-drawer-kpi').textContent = label + (sr ? ' — ' + sr : '');
-  const hasVal = currentVal && currentVal !== '—';
-  document.getElementById('edit-drawer-current').innerHTML = hasVal
-    ? 'Current: <strong>' + currentVal + '</strong>' + (currentNar ? ' &nbsp;·&nbsp; <em>' + currentNar.substring(0,80) + (currentNar.length>80?'…':'') + '</em>' : '')
-    : '<em style="color:#aaa;">Not yet entered</em>';
-  drawer.classList.add('show');
-  // Pre-fill the inputs
-  const valInp = document.getElementById('kpi-value-input');
-  const txtInp = document.getElementById('user-input');
-  if (valInp) valInp.value = (currentVal && currentVal !== '—') ? currentVal : '';
-  if (txtInp) { txtInp.value = currentNar || ''; txtInp.focus(); }
-  // Trigger the backend edit
-  document.getElementById('send-btn').disabled = true;
-  apiCall('edit_kpi:' + sri + ':' + ki).then(function(data) { handleResponse(data); });
-}
-
-function trackerEditFlat(ki, label, currentVal, currentNar) {
-  trackerEdit(null, ki, label, currentVal, currentNar, null);
-}
-
-function closeEditDrawer() {
-  document.getElementById('edit-drawer').classList.remove('show');
-  activeTrackerSri = null;
-  activeTrackerKi  = null;
-  renderTracker();
-}
-
-// ── Chat helpers ──────────────────────────────────────────────
-function scrollToBottom() {
-  const cw = document.getElementById('chat-window');
-  cw.scrollTop = cw.scrollHeight;
-}
-
-function addMessage(html, isUser) {
-  const cw = document.getElementById('chat-window');
-  const wrapper = document.createElement('div');
-  wrapper.style.display = 'flex';
-  wrapper.style.flexDirection = 'column';
-  wrapper.style.alignItems = isUser ? 'flex-end' : 'flex-start';
-  const label = document.createElement('div');
-  label.className = 'msg-label';
-  label.textContent = isUser ? 'You' : 'Agent';
-  const msg = document.createElement('div');
-  msg.className = 'msg ' + (isUser ? 'user' : 'agent');
-  msg.innerHTML = html;
-  wrapper.appendChild(label);
-  wrapper.appendChild(msg);
-  cw.appendChild(wrapper);
-  scrollToBottom();
-}
-
-function showTyping() {
-  const cw = document.getElementById('chat-window');
-  const t = document.createElement('div');
-  t.id = 'typing-indicator';
-  t.className = 'typing';
-  t.innerHTML = '<span></span><span></span><span></span>';
-  cw.appendChild(t);
-  scrollToBottom();
-}
-
-function hideTyping() {
-  const t = document.getElementById('typing-indicator');
-  if (t) t.remove();
-}
-
-function showToast(msg) {
-  const t = document.getElementById('kpi-toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 4000);
-}
-
-function updateProgress(srIdx, kpiIdx) {
-  if (totalSr > 0) {
-    const donePct = Math.round((completedSrIndices.size / totalSr) * 100);
-    document.getElementById('progress-fill').style.width = donePct + '%';
-    const srName = subRegions[srIdx] || '';
-    document.getElementById('progress-label').textContent =
-      completedSrIndices.size >= totalSr ? 'All sub-regions complete — ready to submit!' :
-      kpiIdx > 0 ? srName + ': KPI ' + kpiIdx + ' of ' + totalKpis :
-      srIdx < totalSr ? 'Sub-region ' + (srIdx+1) + ' of ' + totalSr + ': ' + srName : 'Ready to submit!';
-    subRegions.forEach(function(sr, i) {
-      const dot = document.getElementById('sr-dot-' + i);
-      if (!dot) return;
-      dot.className = 'step-dot ' + (completedSrIndices.has(i) ? 'done' : i === srIdx ? 'active' : '');
-    });
-  } else {
-    const pct = totalKpis > 0 ? Math.round((kpiIdx / totalKpis) * 100) : 0;
-    document.getElementById('progress-fill').style.width = pct + '%';
-    document.getElementById('progress-label').textContent =
-      kpiIdx >= totalKpis ? 'All KPIs captured — ready to submit!' :
-      kpiIdx > 0 ? 'KPI ' + kpiIdx + ' of ' + totalKpis + ' completed' : 'Ready to begin…';
-    for (let i = 0; i < totalKpis; i++) {
-      const dot = document.getElementById('dot-' + i);
-      if (!dot) continue;
-      dot.className = 'step-dot ' + (i < kpiIdx ? 'done' : i === kpiIdx ? 'active' : '');
-    }
-  }
-}
-
-async function apiCall(message) {
-  showTyping();
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: message })
-  });
-  hideTyping();
-  return await res.json();
-}
-
-async function startSession() {
-  document.getElementById('start-btn').style.display = 'none';
-  sessionStarted = true;
+  if (btn) { btn.disabled = true; btn.textContent = '✦ Drafting…'; }
   try {
-    await refreshTracker();
-    const data = await apiCall('');
-    handleResponse(data);
+    const res = await fetch('/api/ai-draft', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sub_region: sr,
+        kpi_id:    kpiId,
+        value:     valEl.value.trim(),
+        comment:   narEl ? narEl.value.trim() : ''
+      })
+    });
+    const d = await res.json();
+    if (d.narrative && narEl) {
+      narEl.value = d.narrative;
+      narEl.style.borderColor = '#007DB8';
+      setTimeout(function() { narEl.style.borderColor = ''; }, 1200);
+      // Auto-save after AI draft
+      autoSave(sri, kpiId);
+    } else {
+      showToast('AI draft error: ' + (d.error || 'no narrative returned'), 'error');
+    }
   } catch(e) {
-    addMessage('Error loading session: ' + e.message, false);
+    showToast('AI Draft failed: ' + e.message, 'error');
   }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ AI Draft'; }
 }
 
-function toggleSrMenu() {
-  const menu = document.getElementById('sr-switch-menu');
-  if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+// ── Sub-region tab switching ──────────────────────────────────────────────────
+function switchSr(sri) {
+  SUB_REGIONS.forEach(function(_, i) {
+    const tab   = document.getElementById('tab-' + i);
+    const panel = document.getElementById('sr-panel-' + i);
+    if (tab)   tab.classList.toggle('active', i === sri);
+    if (panel) panel.style.display = i === sri ? '' : 'none';
+  });
+  activeSri = sri;
 }
 
-document.addEventListener('click', function(e) {
-  const wrap = document.getElementById('sr-switch-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    const menu = document.getElementById('sr-switch-menu');
-    if (menu) menu.style.display = 'none';
-  }
-});
-
-async function startKpis() {
-  addMessage("Yes, let's begin!", true);
-  const data = await apiCall('start');
-  handleResponse(data);
-}
-
-async function jumpToSubRegion(idx) {
-  const srName = subRegions[idx] || ('Sub-region ' + (idx+1));
-  addMessage('Starting ' + srName + ' →', true);
-  currentSrIndex = idx;
-  currentKpiIndex = 0;
-  if (completedSrIndices.has(idx)) completedSrIndices.delete(idx);
-  updateProgress(idx, 0);
-  const data = await apiCall('jump_sr:' + idx);
-  handleResponse(data);
-}
-
-async function startSubRegion() {
-  addMessage("Ready →", true);
-  updateProgress(currentSrIndex, 0);
-  const data = await apiCall('start_sr');
-  handleResponse(data);
-}
-
-async function sendMessage() {
-  const inp    = document.getElementById('user-input');
-  const valInp = document.getElementById('kpi-value-input');
-  const narrative = inp.value.trim();
-  if (!narrative) return;
-  const kpiVal    = valInp ? valInp.value.trim() : '';
-  const msg       = kpiVal ? (kpiVal + '||' + narrative) : narrative;
-  const displayMsg = kpiVal ? ('[' + kpiVal + '] ' + narrative) : narrative;
-  addMessage(displayMsg, true);
-  inp.value = '';
-  if (valInp) valInp.value = '';
-  document.getElementById('send-btn').disabled = true;
-  document.getElementById('skip-btn').style.display = 'none';
-  closeEditDrawer();
-  currentKpiIndex++;
-  updateProgress(currentSrIndex, currentKpiIndex);
-  const data = await apiCall(msg);
-  handleResponse(data);
-}
-
-async function skipKpi() {
-  addMessage('[Skipped]', true);
-  document.getElementById('skip-btn').style.display = 'none';
-  currentKpiIndex++;
-  const data = await apiCall('[SKIP]');
-  handleResponse(data);
-}
-
-function handleResponse(data) {
-  try {
-  if (data.type === 'greeting') {
-    addMessage(data.text, false);
-    const lastMsg = document.getElementById('chat-window').lastChild.lastChild;
-    if (data.sub_regions && data.sub_regions.length) {
-      const btnWrap = document.createElement('div');
-      btnWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
-      data.sub_regions.forEach(function(sr, i) {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-start';
-        btn.style.cssText = 'font-size:12px;padding:8px 14px;';
-        btn.textContent = sr + ' →';
-        btn.onclick = (function(idx){ return function() { jumpToSubRegion(idx); }; })(i);
-        btnWrap.appendChild(btn);
-      });
-      const allBtn = document.createElement('button');
-      allBtn.className = 'btn btn-skip';
-      allBtn.style.cssText = 'font-size:12px;padding:8px 14px;';
-      allBtn.textContent = 'Begin in order →';
-      allBtn.onclick = startKpis;
-      btnWrap.appendChild(allBtn);
-      lastMsg.appendChild(btnWrap);
-    } else if (data.show_start) {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-start';
-      btn.textContent = 'Begin →';
-      btn.style.marginTop = '10px';
-      btn.onclick = startKpis;
-      lastMsg.appendChild(btn);
-    }
-    updateProgress(0, 0);
-  }
-  else if (data.type === 'sub_region_start') {
-    addMessage(data.text, false);
-    const kvRow = document.getElementById('kpi-value-row');
-    if (kvRow) kvRow.style.display = 'none';
-    const justDoneSri = (data.sri || 0) - 1;
-    if (justDoneSri >= 0) completedSrIndices.add(justDoneSri);
-    currentSrIndex = data.sri || 0;
-    currentKpiIndex = 0;
-    updateProgress(currentSrIndex, 0);
-    const lastMsg = document.getElementById('chat-window').lastChild.lastChild;
-    if (data.show_start_sr) {
-      const btnWrap = document.createElement('div');
-      btnWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;';
-      const startBtn = document.createElement('button');
-      startBtn.className = 'btn btn-start';
-      startBtn.textContent = 'Start ' + (data.sub_region || 'sub-region') + ' →';
-      startBtn.onclick = startSubRegion;
-      btnWrap.appendChild(startBtn);
-      if (totalSr > 1) {
-        subRegions.forEach(function(sr, i) {
-          if (i === currentSrIndex) return;
-          const jBtn = document.createElement('button');
-          jBtn.className = 'btn btn-skip';
-          jBtn.style.cssText = 'font-size:11px;padding:6px 12px;';
-          jBtn.textContent = 'Go to ' + sr;
-          jBtn.onclick = (function(idx){ return function() { jumpToSubRegion(idx); }; })(i);
-          btnWrap.appendChild(jBtn);
-        });
+// ── Update tab count badges ───────────────────────────────────────────────────
+function updateTabCount(sri) {
+  const sr    = SUB_REGIONS[sri];
+  const srData = currentData[sr] || {};
+  const filled = kpiDefs.filter(function(k) {
+    const e = srData[k.id]; return e && e.value && e.value !== '—';
+  }).length;
+  const total = kpiDefs.length;
+  const el = document.getElementById('tab-count-' + sri);
+  if (el) el.textContent = filled + '/' + total;
+  // Green checkmark on tab if complete
+  const tab = document.getElementById('tab-' + sri);
+  if (tab) {
+    let chk = tab.querySelector('.sr-check');
+    if (filled === total && total > 0) {
+      if (!chk) {
+        chk = document.createElement('span');
+        chk.className = 'sr-check';
+        chk.textContent = '✓';
+        tab.appendChild(chk);
       }
-      lastMsg.appendChild(btnWrap);
+    } else if (chk) {
+      chk.remove();
     }
-    refreshTracker();
-  }
-  else if (data.type === 'kpi') {
-    if (data.confirmed_value && data.confirmed_value !== '—') {
-      showToast('✓ KPI saved — value: ' + data.confirmed_value);
-      refreshTracker();  // update tracker immediately after save
-    }
-    if (data.acknowledgement) addMessage(data.acknowledgement, false);
-    if (data.resolved_narrative) {
-      addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
-    }
-    addMessage(data.text, false);
-    document.getElementById('send-btn').disabled = false;
-    document.getElementById('skip-btn').style.display = 'inline-block';
-    const kvRow = document.getElementById('kpi-value-row');
-    if (kvRow) {
-      kvRow.style.display = 'flex';
-      if (data.kpi_target) {
-        const hint = kvRow.querySelector('.kpi-value-hint');
-        if (hint) hint.textContent = 'Target: ' + data.kpi_target;
-      }
-      document.getElementById('kpi-value-input').focus();
-    }
-    const srSwitchBtn = document.getElementById('sr-switch-btn');
-    if (srSwitchBtn && totalSr > 1) srSwitchBtn.style.display = 'inline-block';
-    if (data.sri !== undefined && data.sri !== null) currentSrIndex = data.sri;
-    currentKpiIndex = data.kpi_index;
-    activeTrackerSri = data.sri !== undefined ? data.sri : null;
-    activeTrackerKi  = data.kpi_index;
-    updateProgress(currentSrIndex, data.kpi_index);
-    renderTracker();
-  }
-  else if (data.type === 'summary') {
-    if (data.confirmed_value && data.confirmed_value !== '—') {
-      showToast('✓ KPI saved — value: ' + data.confirmed_value);
-    }
-    if (data.acknowledgement) addMessage(data.acknowledgement, false);
-    if (data.resolved_narrative) {
-      addMessage('<em style="font-size:12px;color:#888;">Recorded as: "' + data.resolved_narrative + '"</em>', false);
-    }
-    addMessage(data.text, false);
-    document.getElementById('send-btn').disabled = true;
-    document.getElementById('skip-btn').style.display = 'none';
-    document.getElementById('submit-btn').style.display = 'inline-block';
-    const kvRow = document.getElementById('kpi-value-row');
-    if (kvRow) kvRow.style.display = 'none';
-    closeEditDrawer();
-    subRegions.forEach(function(_, i) { completedSrIndices.add(i); });
-    updateProgress(totalSr || totalKpis, totalKpis);
-    refreshTracker();
-  }
-  else if (data.type === 'message') {
-    addMessage(data.text, false);
-  }
-  scrollToBottom();
-  } catch(e) {
-    addMessage('<span style="color:red">JS error: ' + e.message + '</span>', false);
-    console.error('handleResponse error:', e);
   }
 }
 
+// ── Global progress ───────────────────────────────────────────────────────────
+function updateProgress() {
+  let total = 0, saved = 0;
+  SUB_REGIONS.forEach(function(sr) {
+    const srData = currentData[sr] || {};
+    kpiDefs.forEach(function(k) {
+      total++;
+      const e = srData[k.id];
+      if (e && e.value && e.value !== '—') saved++;
+    });
+  });
+  savedCount = saved;
+  const el = document.getElementById('progress-summary');
+  if (el) {
+    el.innerHTML = '<strong>' + saved + ' of ' + total + '</strong> KPIs saved';
+  }
+  const submitCount = document.getElementById('submit-count');
+  if (submitCount) submitCount.textContent = saved + ' of ' + total;
+}
+
+// ── Submit all to sponsor ─────────────────────────────────────────────────────
 async function submitAll() {
-  document.getElementById('submit-btn').disabled = true;
-  document.getElementById('submit-btn').textContent = 'Submitting…';
-  const res = await fetch('/api/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}'
-  });
-  const data = await res.json();
-  if (data.success) {
-    document.querySelector('.input-area').style.display = 'none';
-    const sm = document.getElementById('success-msg');
-    sm.style.display = 'block';
-    sm.innerHTML = '&#10003; ' + data.text + '<br><br><a href="/logout" style="color:#155724;font-weight:700;">Sign out</a>';
-    addMessage(data.text, false);
-    updateProgress(totalSr || totalKpis, totalKpis);
+  const btn = document.getElementById('submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  try {
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: '{}'
+    });
+    const d = await res.json();
+    if (d.success) {
+      document.getElementById('submit-bar').style.display = 'none';
+      document.getElementById('success-banner').style.display = 'block';
+    } else {
+      showToast('Submit error: ' + (d.error || d.text || 'unknown'), 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit to Sponsor →'; }
+    }
+  } catch(e) {
+    showToast('Submit failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Submit to Sponsor →'; }
   }
 }
 
-document.getElementById('user-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey && !document.getElementById('send-btn').disabled) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 3500);
+}
 
-window.onload = function() { startSession(); };
+// ── Escape helpers ────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escQ(s) {
+  // For inline onclick string params: escape single quotes and newlines
+  return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadAvailableMonths();
+loadData();
+
 </script>
 </body>
 </html>
